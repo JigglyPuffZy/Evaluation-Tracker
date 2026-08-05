@@ -10,18 +10,16 @@ import type { CsvParseResult } from './parseEvaluationCsv'
 
 const GOOGLE_FORM_SHEET = 'Form Responses 1'
 
-function excelSerialToDate(serial: unknown): string {
-  if (typeof serial === 'string' && /^\d{4}-\d{2}-\d{2}/.test(serial.trim())) {
-    return serial.trim().slice(0, 10)
-  }
-
-  const n = Number(serial)
-  if (!Number.isFinite(n) || n === 0) {
-    return ''
-  }
-
-  const date = new Date(Date.UTC(1899, 11, 30) + Math.floor(n) * 86_400_000)
-  return date.toISOString().slice(0, 10)
+type GoogleFormColumns = {
+  timestamp: number
+  name: number
+  contact: number
+  trainingTitle: number
+  venue: number
+  trainingDate: number
+  ratingsStart: number
+  areasForImprovement: number
+  futureSuggestions: number
 }
 
 function cellText(value: unknown): string {
@@ -29,7 +27,111 @@ function cellText(value: unknown): string {
     return ''
   }
 
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString()
+  }
+
   return String(value).trim()
+}
+
+function parseTrainingDate(value: unknown): string {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10)
+  }
+
+  const text = cellText(value)
+  if (!text) {
+    return ''
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(text)) {
+    return text.slice(0, 10)
+  }
+
+  const serial = Number(text)
+  if (Number.isFinite(serial) && serial > 0) {
+    const utcDays = serial >= 60 ? serial - 1 : serial
+    const date = new Date(Date.UTC(1899, 11, 30) + Math.floor(utcDays) * 86_400_000)
+    if (!Number.isNaN(date.getTime())) {
+      return date.toISOString().slice(0, 10)
+    }
+  }
+
+  const usMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/)
+  if (usMatch) {
+    const month = usMatch[1].padStart(2, '0')
+    const day = usMatch[2].padStart(2, '0')
+    return `${usMatch[3]}-${month}-${day}`
+  }
+
+  const parsed = Date.parse(text)
+  if (Number.isFinite(parsed)) {
+    return new Date(parsed).toISOString().slice(0, 10)
+  }
+
+  return ''
+}
+
+function headerIndex(headers: string[], ...needles: string[]): number {
+  const index = headers.findIndex((header) =>
+    needles.some((needle) => header.includes(needle)),
+  )
+  return index >= 0 ? index : -1
+}
+
+function buildGoogleFormColumns(headerRow: unknown[]): GoogleFormColumns | null {
+  const headers = headerRow.map((cell) => cellText(cell).toLowerCase())
+
+  const timestamp = headerIndex(headers, 'timestamp')
+  const name = headerIndex(headers, 'name')
+  const contact = headerIndex(headers, 'contact')
+  const trainingTitle = headerIndex(headers, 'training title', 'title of training', 'program title')
+  const venue = headerIndex(headers, 'venue')
+  const trainingDate = headerIndex(headers, 'date/s', 'date/s attended', 'training date', 'date attended')
+
+  if (trainingTitle < 0) {
+    return null
+  }
+
+  const ratingsStart =
+    trainingDate >= 0
+      ? trainingDate + 1
+      : venue >= 0
+        ? venue + 1
+        : trainingTitle + 3
+
+  let areasForImprovement = headerIndex(
+    headers,
+    'areas for improvement',
+    'area for improvement',
+    'improvement',
+  )
+  let futureSuggestions = headerIndex(
+    headers,
+    'future topics',
+    'future training',
+    'suggestions',
+    'recommend',
+  )
+
+  if (areasForImprovement < 0) {
+    areasForImprovement = headers.length - 2
+  }
+  if (futureSuggestions < 0) {
+    futureSuggestions = headers.length - 1
+  }
+
+  return {
+    timestamp: timestamp >= 0 ? timestamp : 0,
+    name: name >= 0 ? name : 1,
+    contact: contact >= 0 ? contact : 2,
+    trainingTitle,
+    venue: venue >= 0 ? venue : trainingTitle + 1,
+    trainingDate: trainingDate >= 0 ? trainingDate : trainingTitle + 2,
+    ratingsStart,
+    areasForImprovement,
+    futureSuggestions,
+  }
 }
 
 function parseRating(value: unknown, field: string, rowNumber: number): number | string {
@@ -48,7 +150,12 @@ function parseRating(value: unknown, field: string, rowNumber: number): number |
 
 function isGoogleFormHeaderRow(row: unknown[]): boolean {
   const first = cellText(row[0]).toLowerCase()
-  return first.includes('timestamp') || first.includes('time stamp')
+  const headers = row.map((cell) => cellText(cell).toLowerCase())
+  return (
+    first.includes('timestamp') ||
+    first.includes('time stamp') ||
+    headers.some((header) => header.includes('training title'))
+  )
 }
 
 function isNormalizedHeaderRow(row: unknown[]): boolean {
@@ -56,7 +163,7 @@ function isNormalizedHeaderRow(row: unknown[]): boolean {
   return EVALUATION_CSV_HEADERS.every((header) => headers.includes(header))
 }
 
-function parseGoogleFormRows(data: unknown[][], stamp: number): CsvParseResult {
+function parseGoogleFormRows(data: unknown[][], columns: GoogleFormColumns, stamp: number): CsvParseResult {
   const rows: EvaluationRow[] = []
   const warnings: string[] = []
 
@@ -68,15 +175,21 @@ function parseGoogleFormRows(data: unknown[][], stamp: number): CsvParseResult {
       continue
     }
 
-    const trainingTitle = cellText(row[3])
-    const trainingDate = excelSerialToDate(row[5])
+    const trainingTitle = cellText(row[columns.trainingTitle])
+    let trainingDate = parseTrainingDate(row[columns.trainingDate])
+
+    if (!trainingDate && columns.timestamp >= 0) {
+      trainingDate = parseTrainingDate(row[columns.timestamp])
+    }
 
     if (!trainingTitle || !trainingDate) {
-      warnings.push(`Row ${rowNumber}: training title and date are required.`)
+      warnings.push(
+        `Row ${rowNumber}: training title and date are required (title: "${trainingTitle || 'empty'}", date: "${cellText(row[columns.trainingDate]) || 'empty'}").`,
+      )
       continue
     }
 
-    const rawRatings = row.slice(6, 31).map((value) => cellText(value))
+    const rawRatings = row.slice(columns.ratingsStart, columns.ratingsStart + 25).map((value) => cellText(value))
     if (rawRatings.length < 25) {
       warnings.push(`Row ${rowNumber}: expected 25 rating columns from Google Form export.`)
       continue
@@ -124,13 +237,13 @@ function parseGoogleFormRows(data: unknown[][], stamp: number): CsvParseResult {
 
     rows.push({
       id: `IMP-${stamp}-${rows.length + 1}`,
-      evaluator_name: cellText(row[1]),
+      evaluator_name: cellText(row[columns.name]),
       training_title: trainingTitle,
-      contact_number: cellText(row[2]),
-      venue: cellText(row[4]),
+      contact_number: cellText(row[columns.contact]),
+      venue: cellText(row[columns.venue]),
       training_date: trainingDate,
-      areas_for_improvement: cellText(row[31]),
-      future_suggestions: cellText(row[32]),
+      areas_for_improvement: cellText(row[columns.areasForImprovement]),
+      future_suggestions: cellText(row[columns.futureSuggestions]),
       ...(ratings as Record<RatingFieldKey, number>),
     })
   }
@@ -182,7 +295,7 @@ function parseNormalizedExcelRows(data: unknown[][], stamp: number): CsvParseRes
     }
 
     const trainingTitle = cellText(row[indexOf.training_title])
-    const trainingDate = excelSerialToDate(row[indexOf.training_date])
+    const trainingDate = parseTrainingDate(row[indexOf.training_date])
 
     if (!trainingTitle || !trainingDate) {
       warnings.push(`Row ${rowNumber}: training_title and training_date are required.`)
@@ -215,7 +328,7 @@ function parseNormalizedExcelRows(data: unknown[][], stamp: number): CsvParseRes
 }
 
 export function parseEvaluationExcel(buffer: ArrayBuffer): CsvParseResult {
-  const workbook = XLSX.read(buffer, { type: 'array', cellDates: false })
+  const workbook = XLSX.read(buffer, { type: 'array', cellDates: true })
   const sheetName = workbook.SheetNames.includes(GOOGLE_FORM_SHEET)
     ? GOOGLE_FORM_SHEET
     : workbook.SheetNames[0]
@@ -227,7 +340,8 @@ export function parseEvaluationExcel(buffer: ArrayBuffer): CsvParseResult {
   const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
     header: 1,
     defval: '',
-    raw: true,
+    raw: false,
+    dateNF: 'yyyy-mm-dd',
   }) as unknown[][]
 
   if (data.length < 2) {
@@ -238,7 +352,14 @@ export function parseEvaluationExcel(buffer: ArrayBuffer): CsvParseResult {
   const headerRow = data[0] as unknown[]
 
   if (isGoogleFormHeaderRow(headerRow)) {
-    return parseGoogleFormRows(data, stamp)
+    const columns = buildGoogleFormColumns(headerRow)
+    if (!columns) {
+      return {
+        ok: false,
+        error: 'Could not find a Training Title column in the Google Form Excel file.',
+      }
+    }
+    return parseGoogleFormRows(data, columns, stamp)
   }
 
   if (isNormalizedHeaderRow(headerRow)) {
