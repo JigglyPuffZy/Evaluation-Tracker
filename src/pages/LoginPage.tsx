@@ -11,7 +11,7 @@ const features = [
     description: 'Dashboards with scores, trends, and session breakdowns.',
   },
   {
-    title: 'CSV import',
+    title: 'Excel import',
     description: 'Bring evaluation sheets in and see results instantly.',
   },
   {

@@ -25,7 +25,7 @@ export function ProgramsPage() {
       {!hasUploads || rows.length === 0 ? (
         <Section
           title="No uploaded trainings yet"
-          description="Import evaluation data first. Training titles will appear here from your CSV."
+          description="Import evaluation data first. Training titles will appear here from your Excel file."
         >
           <Link
             to={{ pathname: '/', hash: 'import' }}

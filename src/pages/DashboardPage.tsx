@@ -21,13 +21,13 @@ export function DashboardPage() {
       <PageHeader
         eyebrow="Overview"
         title="Dashboard"
-        description="Upload evaluation CSV and browse uploaded trainings. Open a training to see its graphs and scores."
+        description="Upload evaluation Excel and browse uploaded trainings. Open a training to see its graphs and scores."
         action={
           <a
             href="#import"
             className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-accent px-4 text-sm font-medium text-white transition hover:bg-accent-deep sm:w-auto"
           >
-            Import CSV
+            Import Excel
           </a>
         }
       />
@@ -48,7 +48,7 @@ export function DashboardPage() {
       {!hasUploads || rows.length === 0 ? (
         <Section
           title="No evaluation results yet"
-          description="Upload a CSV above to see training titles, dates, and evaluator names."
+          description="Upload a Google Form Excel file above to see training titles, dates, and evaluator names."
         >
           <span className="sr-only">Waiting for import</span>
         </Section>

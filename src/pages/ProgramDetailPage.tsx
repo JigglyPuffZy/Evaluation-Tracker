@@ -121,7 +121,7 @@ export function ProgramDetailPage() {
         <Section
           className="mt-6"
           title="No uploaded data"
-          description="Import a DOST Training Evaluation CSV first."
+          description="Import the Google Form Excel file first."
         >
           <Link
             to={{ pathname: '/', hash: 'import' }}
@@ -147,7 +147,7 @@ export function ProgramDetailPage() {
       {stats.totalResponses === 0 ? (
         <Section
           title="No evaluation data yet"
-          description={`No imported rows match “${trainingTitle}”. Check the training_title column in your CSV.`}
+          description={`No imported rows match “${trainingTitle}”. Check the training title column in your Excel file.`}
         >
           <Link
             to={{ pathname: '/', hash: 'import' }}

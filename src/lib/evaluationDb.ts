@@ -97,7 +97,7 @@ export async function insertEvaluationsToSupabase(
   const { data: batch, error: batchError } = await supabase
     .from('import_batches')
     .insert({
-      source: 'csv',
+      source: fileName.toLowerCase().endsWith('.csv') ? 'csv' : 'excel',
       file_name: fileName,
       row_count: rows.length,
       imported_by: userId ?? null,

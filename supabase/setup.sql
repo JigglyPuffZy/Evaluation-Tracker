@@ -57,7 +57,7 @@ $$;
 -- ---------------------------------------------------------------------------
 -- PROFILES (linked to Supabase Auth)
 -- ---------------------------------------------------------------------------
-create type public.app_role as enum ('staff', 'trainer', 'viewer');
+create type public.app_role as enum ('admin', 'staff', 'trainer', 'viewer');
 
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,

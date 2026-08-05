@@ -5,6 +5,7 @@ import { Button } from '../ui/Button'
 import { Section } from '../ui/Section'
 import { useEvaluationData } from '../../context/EvaluationDataContext'
 import { buildEvaluationCsv, buildSampleCsv, parseEvaluationCsv } from '../../lib/parseEvaluationCsv'
+import { isExcelFileName, parseEvaluationExcel } from '../../lib/parseEvaluationExcel'
 
 function downloadCsvFile(contents: string, fileName: string) {
   const blob = new Blob([contents], { type: 'text/csv;charset=utf-8' })
@@ -32,45 +33,42 @@ export function ImportEvaluationsSection() {
   const [isImporting, setIsImporting] = useState(false)
   const [lastImportedCount, setLastImportedCount] = useState<number | null>(null)
 
-  function processFile(file: File) {
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      setImportError('Please upload a .csv file.')
+  async function processFile(file: File) {
+    const lowerName = file.name.toLowerCase()
+    const isCsv = lowerName.endsWith('.csv')
+    const isExcel = isExcelFileName(lowerName)
+
+    if (!isCsv && !isExcel) {
+      setImportError('Please upload a Google Form Excel file (.xlsx).')
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = () => {
-      void (async () => {
-        const text = typeof reader.result === 'string' ? reader.result : ''
-        const result = parseEvaluationCsv(text)
+    setIsImporting(true)
 
-        if (!result.ok) {
-          setImportError(result.error)
-          setImportWarnings([])
-          setLastImportedCount(null)
-          return
-        }
+    try {
+      const result = isExcel
+        ? parseEvaluationExcel(await file.arrayBuffer())
+        : parseEvaluationCsv(await file.text())
 
-        setIsImporting(true)
-        try {
-          await replaceWithImport(result.rows, file.name)
-          setImportError('')
-          setImportWarnings(result.warnings)
-          setLastImportedCount(result.rows.length)
-        } catch (error) {
-          setImportError(
-            error instanceof Error ? error.message : 'Import failed. Check your Supabase connection.',
-          )
-          setLastImportedCount(null)
-        } finally {
-          setIsImporting(false)
-        }
-      })()
+      if (!result.ok) {
+        setImportError(result.error)
+        setImportWarnings([])
+        setLastImportedCount(null)
+        return
+      }
+
+      await replaceWithImport(result.rows, file.name)
+      setImportError('')
+      setImportWarnings(result.warnings)
+      setLastImportedCount(result.rows.length)
+    } catch (error) {
+      setImportError(
+        error instanceof Error ? error.message : 'Import failed. Check your Supabase connection.',
+      )
+      setLastImportedCount(null)
+    } finally {
+      setIsImporting(false)
     }
-    reader.onerror = () => {
-      setImportError('Could not read the selected file.')
-    }
-    reader.readAsText(file)
   }
 
   function openFilePicker() {
@@ -111,7 +109,7 @@ export function ImportEvaluationsSection() {
     <Section
       id="import"
       title="Import & export"
-      description="Import a DOST Training Evaluation CSV file, or export the currently loaded records."
+      description="Import the Google Form Excel export (.xlsx), or export the currently loaded records."
       action={
         <Button variant="secondary" size="sm" onClick={downloadTemplate}>
           Download template
@@ -132,13 +130,14 @@ export function ImportEvaluationsSection() {
             : 'border-line bg-card/80 hover:border-accent/40',
         ].join(' ')}
       >
-        <p className="text-xl font-semibold text-ink">Evaluation CSV</p>
+        <p className="text-xl font-semibold text-ink">Google Form Excel</p>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-          Drag and drop a file here, or use Import to load evaluations into the dashboard.
+          Drag and drop your <strong className="font-medium text-ink">.xlsx</strong> responses file
+          from Google Forms (Responses → Download → Microsoft Excel).
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Button onClick={openFilePicker} disabled={isImporting}>
-            {isImporting ? 'Importing…' : 'Import CSV'}
+            {isImporting ? 'Importing…' : 'Import Excel'}
           </Button>
           <Button variant="secondary" onClick={exportData} disabled={rows.length === 0}>
             Export CSV
@@ -160,7 +159,7 @@ export function ImportEvaluationsSection() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv,text/csv"
+          accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,.csv,text/csv"
           className="hidden"
           onChange={handleFileChange}
         />
