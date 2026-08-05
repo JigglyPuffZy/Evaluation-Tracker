@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
+import { BrandLogo } from '../components/ui/BrandLogo'
 import { useAuth } from '../context/AuthContext'
 
 const features = [
@@ -121,10 +122,18 @@ export function LoginPage() {
     }
 
     setIsSubmitting(true)
-    await new Promise((resolve) => window.setTimeout(resolve, 650))
 
-    login(email, remember)
-    navigate('/', { replace: true })
+    try {
+      await login(email.trim(), password)
+      navigate('/', { replace: true })
+    } catch (caught) {
+      const message =
+        caught instanceof Error ? caught.message : 'Sign in failed. Check your credentials.'
+      setError(message)
+      setShakeForm(true)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -146,7 +155,7 @@ export function LoginPage() {
 
           <div className="relative">
             <div className="login-brand-badge">
-              <span className="login-brand-dot" />
+              <BrandLogo size="sm" withBackground={false} className="!h-5 !w-5 rounded-none bg-transparent p-0 shadow-none" />
               DOST Regional Office No. 02
             </div>
 
@@ -191,13 +200,24 @@ export function LoginPage() {
 
           <div className="relative">
             <div className="lg:hidden">
-              <p className="login-form-kicker">DOST RO2</p>
-              <h1 className="login-form-title type-title-md">Sign in</h1>
+              <div className="mb-3 flex items-center gap-2.5">
+                <BrandLogo size="md" />
+                <div>
+                  <p className="login-form-kicker">DOST RO2</p>
+                  <h1 className="login-form-title type-title-md">Sign in</h1>
+                </div>
+              </div>
             </div>
 
             <div className="hidden lg:block">
-              <h2 className="login-form-title type-title-lg">Welcome back</h2>
-              <p className="login-form-subtitle mt-2 max-w-xs">
+              <div className="mb-6 flex items-center gap-3">
+                <BrandLogo size="lg" />
+                <div>
+                  <p className="login-form-kicker">DOST RO2</p>
+                  <h2 className="login-form-title type-title-lg">Welcome back</h2>
+                </div>
+              </div>
+              <p className="login-form-subtitle max-w-xs">
                 Sign in to access dashboards, training records, and evaluation insights.
               </p>
             </div>

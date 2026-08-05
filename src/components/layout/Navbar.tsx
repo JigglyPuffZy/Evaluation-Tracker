@@ -1,5 +1,6 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { BrandLogo } from '../ui/BrandLogo'
 import { ThemeToggle } from '../ui/ThemeToggle'
 
 const navItems = [
@@ -12,15 +13,19 @@ export function Navbar() {
   const { logout } = useAuth()
 
   function handleSignOut() {
-    logout()
-    navigate('/login', { replace: true })
+    void logout().then(() => {
+      navigate('/login', { replace: true })
+    })
   }
 
   return (
     <header className="glass-navbar sticky top-0 z-30 text-white">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 md:px-6">
-        <Link to="/" className="min-w-0 max-w-[42vw] shrink sm:max-w-none">
+        <Link to="/" className="flex min-w-0 max-w-[46vw] shrink items-center gap-2.5 sm:max-w-none">
+          <BrandLogo size="md" />
           <p className="truncate text-sm font-semibold tracking-tight sm:text-base">
+            <span className="hidden min-[420px]:inline">DOST RO2 — </span>
+            <span className="min-[420px]:hidden">DOST RO2 </span>
             Training Evaluation Analytics
           </p>
         </Link>

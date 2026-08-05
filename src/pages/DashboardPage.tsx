@@ -9,7 +9,7 @@ import { useEvaluationData } from '../context/EvaluationDataContext'
 import { buildUploadedTrainings } from '../lib/buildTrainingSummaries'
 
 export function DashboardPage() {
-  const { rows, stats, sourceLabel, hasUploads } = useEvaluationData()
+  const { rows, stats, sourceLabel, hasUploads, isLoading, loadError } = useEvaluationData()
 
   const uploadedTrainings = useMemo(() => buildUploadedTrainings(rows), [rows])
 
@@ -34,7 +34,14 @@ export function DashboardPage() {
 
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={hasUploads ? 'accent' : 'neutral'}>{sourceLabel}</Badge>
+        {isLoading ? <Badge tone="neutral">Loading…</Badge> : null}
       </div>
+
+      {loadError ? (
+        <p className="rounded-xl border border-warn/30 bg-warn-soft px-4 py-3 text-sm text-warn" role="alert">
+          {loadError}. Run <code className="text-xs">supabase/setup.sql</code> in Supabase SQL Editor, then refresh.
+        </p>
+      ) : null}
 
       <ImportEvaluationsSection />
 

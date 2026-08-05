@@ -29,6 +29,7 @@ export function ImportEvaluationsSection() {
   const [importError, setImportError] = useState('')
   const [importWarnings, setImportWarnings] = useState<string[]>([])
   const [isDragging, setIsDragging] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
   const [lastImportedCount, setLastImportedCount] = useState<number | null>(null)
 
   function processFile(file: File) {
@@ -39,20 +40,32 @@ export function ImportEvaluationsSection() {
 
     const reader = new FileReader()
     reader.onload = () => {
-      const text = typeof reader.result === 'string' ? reader.result : ''
-      const result = parseEvaluationCsv(text)
+      void (async () => {
+        const text = typeof reader.result === 'string' ? reader.result : ''
+        const result = parseEvaluationCsv(text)
 
-      if (!result.ok) {
-        setImportError(result.error)
-        setImportWarnings([])
-        setLastImportedCount(null)
-        return
-      }
+        if (!result.ok) {
+          setImportError(result.error)
+          setImportWarnings([])
+          setLastImportedCount(null)
+          return
+        }
 
-      replaceWithImport(result.rows, file.name)
-      setImportError('')
-      setImportWarnings(result.warnings)
-      setLastImportedCount(result.rows.length)
+        setIsImporting(true)
+        try {
+          await replaceWithImport(result.rows, file.name)
+          setImportError('')
+          setImportWarnings(result.warnings)
+          setLastImportedCount(result.rows.length)
+        } catch (error) {
+          setImportError(
+            error instanceof Error ? error.message : 'Import failed. Check your Supabase connection.',
+          )
+          setLastImportedCount(null)
+        } finally {
+          setIsImporting(false)
+        }
+      })()
     }
     reader.onerror = () => {
       setImportError('Could not read the selected file.')
@@ -124,14 +137,23 @@ export function ImportEvaluationsSection() {
           Drag and drop a file here, or use Import to load evaluations into the dashboard.
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <Button onClick={openFilePicker}>Import CSV</Button>
+          <Button onClick={openFilePicker} disabled={isImporting}>
+            {isImporting ? 'Importing…' : 'Import CSV'}
+          </Button>
           <Button variant="secondary" onClick={exportData} disabled={rows.length === 0}>
             Export CSV
           </Button>
-          <Button variant="secondary" onClick={loadSampleData}>
-            Load sample data
+          <Button variant="secondary" onClick={() => void loadSampleData()}>
+            Refresh data
           </Button>
-          <Button variant="ghost" onClick={clearUploads}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              void clearUploads().catch((error) => {
+                setImportError(error instanceof Error ? error.message : 'Could not clear data.')
+              })
+            }}
+          >
             Clear data
           </Button>
         </div>
