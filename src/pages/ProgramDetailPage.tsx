@@ -244,7 +244,7 @@ export function ProgramDetailPage() {
 
             <Section
               title="Parts I–V"
-              description="Consolidated radar across Parts I–V. Comments are in Part VI below."
+              description="Simple score for each part of the evaluation form. Comments are in Part VI below."
             >
               <SectionScoreList sections={stats.sections} max={RATING_SCALE_MAX} />
             </Section>
