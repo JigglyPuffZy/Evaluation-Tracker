@@ -10,6 +10,7 @@ import { ScoreRing } from '../components/ui/ScoreRing'
 import { Section } from '../components/ui/Section'
 import { useEvaluationData } from '../context/EvaluationDataContext'
 import { computeEvaluationStats } from '../lib/computeEvaluationStats'
+import { filterRowsByTrainingTitle } from '../lib/buildTrainingSummaries'
 import { getRowOverallAverage } from '../lib/evaluationRow'
 import { PartVIComments } from '../components/evaluation/PartVIComments'
 import { PART_VI_SECTION, RATING_SCALE_MAX, type EvaluationRow } from '../types/evaluation'
@@ -94,7 +95,7 @@ export function ProgramDetailPage() {
   }
 
   const trainingRows = useMemo(
-    () => rows.filter((row) => row.training_title === trainingTitle),
+    () => filterRowsByTrainingTitle(rows, trainingTitle),
     [rows, trainingTitle],
   )
 
@@ -244,7 +245,7 @@ export function ProgramDetailPage() {
 
             <Section
               title="Parts I–V"
-              description="Simple score for each part of the evaluation form. Comments are in Part VI below."
+              description="Radar view of Parts I–V, with each score listed below. Comments are in Part VI."
             >
               <SectionScoreList sections={stats.sections} max={RATING_SCALE_MAX} />
             </Section>

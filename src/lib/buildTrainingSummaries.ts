@@ -1,5 +1,6 @@
 import type { EvaluationRow } from '../types/evaluation'
 import { getRowOverallAverage } from './evaluationRow'
+import { normalizeTrainingTitle, pickCanonicalTrainingTitle } from './normalizeTrainingTitle'
 import { RATING_SCALE_MAX } from '../types/evaluation'
 
 export type TrainingSummary = {
@@ -45,27 +46,49 @@ function summarizeRows(title: string, trainingRows: EvaluationRow[]): TrainingSu
   }
 }
 
-/** One entry per training title + date (dashboard cards). */
+function groupRowsByNormalizedTitle(rows: EvaluationRow[]): Map<string, EvaluationRow[]> {
+  const grouped = new Map<string, EvaluationRow[]>()
+
+  for (const row of rows) {
+    const key = normalizeTrainingTitle(row.training_title)
+    const existing = grouped.get(key) ?? []
+    existing.push(row)
+    grouped.set(key, existing)
+  }
+
+  return grouped
+}
+
+/** One entry per normalized training title (groups spelling variants). */
+export function buildTrainingSummariesByTitle(rows: EvaluationRow[]): TrainingSummary[] {
+  return [...groupRowsByNormalizedTitle(rows).entries()]
+    .map(([, trainingRows]) => {
+      const canonicalTitle = pickCanonicalTrainingTitle(trainingRows.map((row) => row.training_title))
+      return summarizeRows(canonicalTitle, trainingRows)
+    })
+    .sort((a, b) => b.responses - a.responses)
+}
+
+/** One entry per normalized title + date. */
 export function buildUploadedTrainings(rows: EvaluationRow[]): TrainingSummary[] {
   const grouped = new Map<string, EvaluationRow[]>()
 
   for (const row of rows) {
-    const key = `${row.training_title}|||${row.training_date}`
+    const key = `${normalizeTrainingTitle(row.training_title)}|||${row.training_date}`
     const existing = grouped.get(key) ?? []
     existing.push(row)
     grouped.set(key, existing)
   }
 
   return [...grouped.entries()]
-    .map(([, trainingRows]) => summarizeRows(trainingRows[0].training_title, trainingRows))
+    .map(([, trainingRows]) => {
+      const canonicalTitle = pickCanonicalTrainingTitle(trainingRows.map((row) => row.training_title))
+      return summarizeRows(canonicalTitle, trainingRows)
+    })
     .sort((a, b) => b.trainingDate.localeCompare(a.trainingDate))
 }
 
-/** One entry per training title (trainings page). */
-export function buildTrainingSummariesByTitle(rows: EvaluationRow[]): TrainingSummary[] {
-  const titles = [...new Set(rows.map((row) => row.training_title))]
-
-  return titles
-    .map((title) => summarizeRows(title, rows.filter((row) => row.training_title === title)))
-    .sort((a, b) => b.responses - a.responses)
+export function filterRowsByTrainingTitle(rows: EvaluationRow[], trainingTitle: string): EvaluationRow[] {
+  const target = normalizeTrainingTitle(trainingTitle)
+  return rows.filter((row) => normalizeTrainingTitle(row.training_title) === target)
 }
