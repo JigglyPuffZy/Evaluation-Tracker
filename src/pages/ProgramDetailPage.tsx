@@ -6,16 +6,11 @@ import { VerticalBarChart } from '../components/charts/VerticalBarChart'
 import { SectionScoreList } from '../components/evaluation/SectionScoreList'
 import { Badge } from '../components/ui/Badge'
 import { BackLink } from '../components/ui/NavLinks'
-import { RatingStars } from '../components/ui/RatingStars'
 import { ScoreRing } from '../components/ui/ScoreRing'
 import { Section } from '../components/ui/Section'
 import { useEvaluationData } from '../context/EvaluationDataContext'
 import { computeEvaluationStats } from '../lib/computeEvaluationStats'
-import {
-  formatEvaluatorName,
-  getRowOverallAverage,
-  getRowOverallPercent,
-} from '../lib/evaluationRow'
+import { getRowOverallAverage } from '../lib/evaluationRow'
 import { PartVIComments } from '../components/evaluation/PartVIComments'
 import { PART_VI_SECTION, RATING_SCALE_MAX, type EvaluationRow } from '../types/evaluation'
 
@@ -106,8 +101,6 @@ export function ProgramDetailPage() {
   const stats = useMemo(() => computeEvaluationStats(trainingRows), [trainingRows])
   const dateStats = useMemo(() => computeDateStats(trainingRows), [trainingRows])
 
-  const namedCount = trainingRows.filter((row) => row.evaluator_name.trim()).length
-  const optionalCount = trainingRows.length - namedCount
   const primaryDate = dateStats[0]
 
   if (!trainingTitle) {
@@ -211,27 +204,13 @@ export function ProgramDetailPage() {
                 </div>
               </div>
 
-              <div className="mt-6 grid grid-cols-1 gap-3 border-t border-line/60 pt-6 sm:grid-cols-3">
-                <div className="rounded-xl bg-surface/50 px-4 py-3">
+              <div className="mt-6 border-t border-line/60 pt-6">
+                <div className="rounded-xl bg-surface/50 px-4 py-3 sm:max-w-xs">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted">
                     Agree / Excellent
                   </p>
                   <p className="mt-1 text-2xl font-semibold text-good">{stats.positivePercent}%</p>
                   <p className="text-xs text-muted">Scores 3–4</p>
-                </div>
-                <div className="rounded-xl bg-surface/50 px-4 py-3">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                    Named evaluators
-                  </p>
-                  <p className="mt-1 text-2xl font-semibold text-ink">{namedCount}</p>
-                  <p className="text-xs text-muted">Name provided on form</p>
-                </div>
-                <div className="rounded-xl bg-surface/50 px-4 py-3">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                    Optional names
-                  </p>
-                  <p className="mt-1 text-2xl font-semibold text-ink">{optionalCount}</p>
-                  <p className="text-xs text-muted">Left blank (allowed)</p>
                 </div>
               </div>
             </div>
@@ -265,7 +244,7 @@ export function ProgramDetailPage() {
 
             <Section
               title="Parts I–V"
-              description="Form sections for this training. Comments are in Part VI below."
+              description="Consolidated radar across Parts I–V. Comments are in Part VI below."
             >
               <SectionScoreList sections={stats.sections} max={RATING_SCALE_MAX} />
             </Section>
@@ -303,41 +282,6 @@ export function ProgramDetailPage() {
               </div>
             </Section>
           ) : null}
-
-          <Section
-            title="Evaluator records"
-            description="One card per submitted evaluation form."
-          >
-            <div className="grid gap-3 sm:grid-cols-2">
-              {trainingRows.map((row) => {
-                const average = getRowOverallAverage(row)
-                const percent = getRowOverallPercent(row)
-                return (
-                  <article
-                    key={row.id}
-                    className="card-surface card-surface-hover rounded-xl p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-ink">
-                          {formatEvaluatorName(row.evaluator_name)}
-                        </p>
-                        <p className="mt-0.5 text-xs text-muted">{row.training_date}</p>
-                      </div>
-                      <Badge tone={average >= 3 ? 'good' : 'warn'}>{average.toFixed(1)}</Badge>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between gap-2">
-                      <RatingStars score={average} max={RATING_SCALE_MAX} />
-                      <span className="text-sm tabular-nums text-muted">{percent}%</span>
-                    </div>
-                    {row.venue ? (
-                      <p className="mt-3 truncate text-xs text-muted">Venue: {row.venue}</p>
-                    ) : null}
-                  </article>
-                )
-              })}
-            </div>
-          </Section>
 
           <Section
             title={PART_VI_SECTION.title}

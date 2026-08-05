@@ -4,17 +4,13 @@ import { TrainingCard } from '../components/evaluation/TrainingCard'
 import { Badge } from '../components/ui/Badge'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Section } from '../components/ui/Section'
-import { Stat } from '../components/ui/Stat'
 import { useEvaluationData } from '../context/EvaluationDataContext'
-import { buildUploadedTrainings } from '../lib/buildTrainingSummaries'
+import { buildTrainingSummariesByTitle } from '../lib/buildTrainingSummaries'
 
 export function DashboardPage() {
-  const { rows, stats, sourceLabel, hasUploads, isLoading, loadError } = useEvaluationData()
+  const { rows, sourceLabel, hasUploads, isLoading, loadError } = useEvaluationData()
 
-  const uploadedTrainings = useMemo(() => buildUploadedTrainings(rows), [rows])
-
-  const namedEvaluators = rows.filter((row) => row.evaluator_name.trim()).length
-  const optionalEvaluators = rows.length - namedEvaluators
+  const uploadedTrainings = useMemo(() => buildTrainingSummariesByTitle(rows), [rows])
 
   return (
     <div className="space-y-6">
@@ -54,41 +50,17 @@ export function DashboardPage() {
         </Section>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat
-              label="Uploaded trainings"
-              value={`${uploadedTrainings.length}`}
-              delta="Grouped by title and date"
-            />
-            <Stat
-              label="Total evaluations"
-              value={`${stats.totalResponses}`}
-              delta={sourceLabel}
-              className="animate-rise-delay-1"
-            />
-            <Stat
-              label="Named evaluators"
-              value={`${namedEvaluators}`}
-              delta="Evaluator name provided"
-              className="animate-rise-delay-2"
-            />
-            <Stat
-              label="Optional names"
-              value={`${optionalEvaluators}`}
-              delta="No evaluator name in form"
-              className="animate-rise-delay-3 sm:col-span-2 xl:col-span-1"
-            />
-          </div>
-
           <Section
             title="Uploaded trainings"
-            description="Each training has its own graphs and Parts I–V scores. Click View graphs to open one."
+            description="One card per training title with consolidated scores across all sessions."
           >
             <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {uploadedTrainings.map((training) => (
                 <TrainingCard
-                  key={`${training.trainingTitle}-${training.trainingDate}`}
+                  key={training.trainingTitle}
                   training={training}
+                  linkTitle
+                  showEvaluators={false}
                 />
               ))}
             </div>

@@ -4,15 +4,13 @@ import { TrainingCard } from '../components/evaluation/TrainingCard'
 import { Badge } from '../components/ui/Badge'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Section } from '../components/ui/Section'
-import { Stat } from '../components/ui/Stat'
 import { useEvaluationData } from '../context/EvaluationDataContext'
 import { buildTrainingSummariesByTitle } from '../lib/buildTrainingSummaries'
 
 export function ProgramsPage() {
-  const { rows, stats, sourceLabel, hasUploads } = useEvaluationData()
+  const { rows, sourceLabel, hasUploads } = useEvaluationData()
 
   const trainings = useMemo(() => buildTrainingSummariesByTitle(rows), [rows])
-  const namedEvaluators = rows.filter((row) => row.evaluator_name.trim()).length
 
   return (
     <div className="space-y-6">
@@ -39,26 +37,6 @@ export function ProgramsPage() {
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="accent">{sourceLabel}</Badge>
             <span className="text-sm text-muted">{trainings.length} trainings loaded</span>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <Stat
-              label="Trainings"
-              value={`${trainings.length}`}
-              delta="Unique training titles"
-            />
-            <Stat
-              label="Total evaluations"
-              value={`${stats.totalResponses}`}
-              delta="Across all trainings"
-              className="animate-rise-delay-1"
-            />
-            <Stat
-              label="Named evaluators"
-              value={`${namedEvaluators}`}
-              delta="Optional names allowed"
-              className="animate-rise-delay-2 sm:col-span-2 xl:col-span-1"
-            />
           </div>
 
           <Section

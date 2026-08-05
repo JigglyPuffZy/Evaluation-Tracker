@@ -1,24 +1,40 @@
 import { Badge } from '../ui/Badge'
 import { PART_VI_SECTION } from '../../types/evaluation'
 import type { EvaluationRow } from '../../types/evaluation'
-import { formatEvaluatorName } from '../../lib/evaluationRow'
 
 type PartVICommentsProps = {
   rows: EvaluationRow[]
 }
 
-function getInitials(name: string): string {
-  const trimmed = name.trim()
-  if (!trimmed) {
-    return '?'
+function isMeaningfulComment(value: string): boolean {
+  const normalized = value.trim().toLowerCase()
+  if (!normalized) {
+    return false
   }
 
-  const parts = trimmed.split(/\s+/).filter(Boolean)
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase()
+  return !['none', 'n/a', 'na', '-', '.', '~', 'n/a.', 'none.'].includes(normalized)
+}
+
+function collectUniqueComments(rows: EvaluationRow[], key: 'areas_for_improvement' | 'future_suggestions') {
+  const seen = new Set<string>()
+  const comments: string[] = []
+
+  for (const row of rows) {
+    const value = row[key].trim()
+    if (!isMeaningfulComment(value)) {
+      continue
+    }
+
+    const fingerprint = value.toLowerCase()
+    if (seen.has(fingerprint)) {
+      continue
+    }
+
+    seen.add(fingerprint)
+    comments.push(value)
   }
 
-  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase()
+  return comments
 }
 
 function QuoteIcon() {
@@ -29,36 +45,11 @@ function QuoteIcon() {
   )
 }
 
-function FieldIcon({ type }: { type: 'improvement' | 'suggestions' }) {
-  if (type === 'improvement') {
-    return (
-      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path
-          d="M10 3.5 12.5 8l4.5.5-3.5 3 1 4.5L10 14l-4.5 2 1-4.5-3.5-3 4.5-.5L10 3.5Z"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-        />
-      </svg>
-    )
-  }
-
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <path
-        d="M10 3.5a4.5 4.5 0 0 0-2.2 8.4V14h4.4v-2.1A4.5 4.5 0 0 0 10 3.5Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path d="M8.5 16.5h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  )
-}
-
 export function PartVIComments({ rows }: PartVICommentsProps) {
+  const improvements = collectUniqueComments(rows, 'areas_for_improvement')
+  const suggestions = collectUniqueComments(rows, 'future_suggestions')
   const withComments = rows.filter(
-    (row) => row.areas_for_improvement.trim() || row.future_suggestions.trim(),
+    (row) => isMeaningfulComment(row.areas_for_improvement) || isMeaningfulComment(row.future_suggestions),
   )
 
   return (
@@ -66,63 +57,42 @@ export function PartVIComments({ rows }: PartVICommentsProps) {
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-accent/20 bg-accent-soft/30 px-4 py-3">
         <div className="flex items-center gap-2 text-sm text-ink-soft">
           <QuoteIcon />
-          <span>Open-ended feedback from the DOST evaluation form</span>
+          <span>Consolidated open-ended feedback for this training</span>
         </div>
         <Badge tone="accent">
-          {withComments.length} of {rows.length} with comments
+          {withComments.length} of {rows.length} responses with comments
         </Badge>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {rows.map((row) => {
-          const displayName = formatEvaluatorName(row.evaluator_name)
-          const hasContent =
-            row.areas_for_improvement.trim().length > 0 ||
-            row.future_suggestions.trim().length > 0
+        {PART_VI_SECTION.fields.map((field) => {
+          const comments =
+            field.key === 'areas_for_improvement' ? improvements : suggestions
 
           return (
-            <article
-              key={row.id}
-              className={[
-                'part-vi-card overflow-hidden rounded-2xl',
-                hasContent ? 'part-vi-card-filled' : 'part-vi-card-empty',
-              ].join(' ')}
-            >
-              <div className="flex items-start gap-3 border-b border-line/50 px-4 py-3.5 sm:px-5">
-                <div
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent"
-                  aria-hidden="true"
-                >
-                  {getInitials(row.evaluator_name)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-ink">{displayName}</p>
-                  <p className="mt-0.5 text-xs text-muted">{row.training_date}</p>
-                </div>
-                {!hasContent ? <Badge tone="neutral">No comments</Badge> : null}
+            <article key={field.key} className="part-vi-card part-vi-card-filled overflow-hidden rounded-2xl">
+              <div className="border-b border-line/50 px-4 py-3.5 sm:px-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">{field.label}</p>
+                <p className="mt-1 text-sm text-ink-soft">
+                  {comments.length} unique response{comments.length === 1 ? '' : 's'}
+                </p>
               </div>
 
-              <div className="space-y-3 p-4 sm:p-5">
-                {PART_VI_SECTION.fields.map((field, index) => {
-                  const value = row[field.key].trim()
-                  const iconType = index === 0 ? 'improvement' : 'suggestions'
-
-                  return (
-                    <div key={field.key} className="part-vi-field rounded-xl p-3.5 sm:p-4">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft text-accent">
-                          <FieldIcon type={iconType} />
-                        </span>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                          {field.label}
-                        </p>
-                      </div>
-                      <p className="mt-3 text-sm leading-relaxed text-ink-soft break-words">
-                        {value || 'No response provided.'}
-                      </p>
-                    </div>
-                  )
-                })}
+              <div className="p-4 sm:p-5">
+                {comments.length > 0 ? (
+                  <ul className="space-y-3">
+                    {comments.map((comment) => (
+                      <li
+                        key={comment}
+                        className="part-vi-field rounded-xl px-3.5 py-3 text-sm leading-relaxed text-ink-soft break-words sm:px-4 sm:py-3.5"
+                      >
+                        {comment}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted">No responses provided for this field.</p>
+                )}
               </div>
             </article>
           )
