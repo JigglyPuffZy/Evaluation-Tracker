@@ -140,24 +140,35 @@ export function SectionRadarChart({ sections, max = 4 }: SectionRadarChartProps)
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {sections.map((section) => (
+        {sections.map((section) => {
+          const fullTitle = shortSectionTitle(section.label)
+
+          return (
           <div
             key={section.id}
-            className="flex items-center gap-3 rounded-xl border border-line/60 bg-surface/40 px-3 py-3"
+            className="group relative flex items-center gap-3 rounded-xl border border-line/60 bg-surface/40 px-3 py-3"
+            title={fullTitle}
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-xs font-bold text-accent">
               {SECTION_ROMAN[section.id]}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-ink">{shortSectionTitle(section.label)}</p>
+              <p className="truncate text-sm font-medium text-ink">{fullTitle}</p>
               <p className="text-xs text-muted">
                 <span className="font-semibold text-ink">{section.percent}%</span>
                 {' · '}
                 {section.average.toFixed(1)}/{max}
               </p>
             </div>
+            <div
+              className="pointer-events-none absolute bottom-full left-10 z-20 mb-2 hidden max-w-[16rem] rounded-lg border border-line/60 bg-card px-3 py-2 text-xs font-medium leading-snug text-ink shadow-[var(--shadow-card)] group-hover:block sm:max-w-[18rem]"
+              role="tooltip"
+            >
+              {fullTitle}
+            </div>
           </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
