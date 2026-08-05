@@ -1,4 +1,5 @@
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import { ThemeToggle } from '../ui/ThemeToggle'
 
 const navItems = [
@@ -7,19 +8,24 @@ const navItems = [
 ]
 
 export function Navbar() {
+  const navigate = useNavigate()
+  const { logout } = useAuth()
+
+  function handleSignOut() {
+    logout()
+    navigate('/login', { replace: true })
+  }
+
   return (
-    <header className="sticky top-0 z-30 border-b border-accent-deep/30 bg-accent shadow-[0_4px_24px_rgba(0,40,85,0.22)] dark:border-line/20 dark:bg-[#0d1f3d] dark:shadow-[0_4px_24px_rgba(0,0,0,0.45)]">
+    <header className="glass-navbar sticky top-0 z-30 text-white">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 md:px-6">
         <Link to="/" className="min-w-0 max-w-[42vw] shrink sm:max-w-none">
-          <p className="truncate text-sm font-semibold tracking-tight sm:text-lg">
+          <p className="truncate text-sm font-semibold tracking-tight sm:text-base">
             Training Evaluation Analytics
           </p>
         </Link>
 
-        <nav
-          className="flex items-center gap-1 rounded-xl bg-white/10 p-1 backdrop-blur-sm"
-          aria-label="Main"
-        >
+        <nav className="glass-nav-pill flex items-center gap-1 rounded-xl p-1" aria-label="Main">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -41,12 +47,13 @@ export function Navbar() {
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <ThemeToggle variant="navbar" />
-          <Link
-            to="/login"
-            className="hidden text-sm font-medium text-white/85 transition hover:text-white sm:inline-flex"
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="text-sm font-medium text-white/85 transition hover:text-white"
           >
             Sign out
-          </Link>
+          </button>
         </div>
       </div>
     </header>

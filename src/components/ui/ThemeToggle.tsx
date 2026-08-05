@@ -28,7 +28,7 @@ function MoonIcon({ className = '' }: { className?: string }) {
 }
 
 type ThemeToggleProps = {
-  variant?: 'navbar' | 'default'
+  variant?: 'navbar' | 'default' | 'login'
 }
 
 export function ThemeToggle({ variant = 'default' }: ThemeToggleProps) {
@@ -49,11 +49,28 @@ export function ThemeToggle({ variant = 'default' }: ThemeToggleProps) {
     )
   }
 
+  if (variant === 'login') {
+    return (
+      <button
+        type="button"
+        onClick={toggleTheme}
+        className="login-theme-toggle inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        title={isDark ? 'Light mode' : 'Dark mode'}
+      >
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15">
+          {isDark ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
+        </span>
+        <span className="hidden sm:inline">{isDark ? 'Light' : 'Dark'}</span>
+      </button>
+    )
+  }
+
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-card px-3 text-sm font-medium text-ink-soft shadow-sm transition hover:border-accent/30 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      className="glass-panel inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-ink-soft transition hover:border-accent/30 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft text-accent">

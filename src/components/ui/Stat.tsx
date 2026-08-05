@@ -14,9 +14,9 @@ export function Stat({ label, value, delta, tone = 'neutral', className = '' }: 
         className,
       ].join(' ')}
     >
-      <p className="text-sm font-medium text-muted">{label}</p>
-      <p className="mt-3 text-3xl font-semibold tracking-tight text-ink">{value}</p>
-      <p className={['mt-2 text-sm', tone === 'good' ? 'text-good' : 'text-muted'].join(' ')}>
+      <p className="type-label text-muted">{label}</p>
+      <p className="type-title-lg mt-3 tabular-nums text-ink">{value}</p>
+      <p className={['type-body mt-2', tone === 'good' ? 'text-good' : 'text-muted'].join(' ')}>
         {delta}
       </p>
     </div>
