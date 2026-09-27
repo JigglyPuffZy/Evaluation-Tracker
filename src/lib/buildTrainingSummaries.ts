@@ -1,6 +1,10 @@
 import type { EvaluationRow } from '../types/evaluation'
 import { getRowOverallAverage } from './evaluationRow'
-import { normalizeTrainingTitle, pickCanonicalTrainingTitle } from './normalizeTrainingTitle'
+import {
+  normalizeTrainingTitle,
+  normalizeTrainingTitleForGrouping,
+  pickCanonicalTrainingTitle,
+} from './normalizeTrainingTitle'
 import { RATING_SCALE_MAX } from '../types/evaluation'
 
 export type TrainingSummary = {
@@ -13,6 +17,9 @@ export type TrainingSummary = {
   responses: number
   average: number
   percentOfScale: number
+  /** How many different spellings were combined into this card (1 = clean). */
+  titleVariantCount: number
+  rawTitles: string[]
 }
 
 function round1(value: number): number {
@@ -30,6 +37,7 @@ function summarizeRows(title: string, trainingRows: EvaluationRow[]): TrainingSu
     b.localeCompare(a),
   )
   const venues = [...new Set(trainingRows.map((row) => row.venue).filter(Boolean))]
+  const rawTitles = [...new Set(trainingRows.map((row) => row.training_title.trim()).filter(Boolean))]
 
   return {
     trainingTitle: title,
@@ -43,14 +51,16 @@ function summarizeRows(title: string, trainingRows: EvaluationRow[]): TrainingSu
     responses: trainingRows.length,
     average,
     percentOfScale: round0((average / RATING_SCALE_MAX) * 100),
+    titleVariantCount: rawTitles.length,
+    rawTitles,
   }
 }
 
-function groupRowsByNormalizedTitle(rows: EvaluationRow[]): Map<string, EvaluationRow[]> {
+function groupRowsByGroupingKey(rows: EvaluationRow[]): Map<string, EvaluationRow[]> {
   const grouped = new Map<string, EvaluationRow[]>()
 
   for (const row of rows) {
-    const key = normalizeTrainingTitle(row.training_title)
+    const key = normalizeTrainingTitleForGrouping(row.training_title)
     const existing = grouped.get(key) ?? []
     existing.push(row)
     grouped.set(key, existing)
@@ -59,9 +69,9 @@ function groupRowsByNormalizedTitle(rows: EvaluationRow[]): Map<string, Evaluati
   return grouped
 }
 
-/** One entry per normalized training title (groups spelling variants). */
+/** One card per program — merges spelling variants (SAMRT/SMART/Smart) into one summary. */
 export function buildTrainingSummariesByTitle(rows: EvaluationRow[]): TrainingSummary[] {
-  return [...groupRowsByNormalizedTitle(rows).entries()]
+  return [...groupRowsByGroupingKey(rows).entries()]
     .map(([, trainingRows]) => {
       const canonicalTitle = pickCanonicalTrainingTitle(trainingRows.map((row) => row.training_title))
       return summarizeRows(canonicalTitle, trainingRows)
@@ -74,7 +84,7 @@ export function buildUploadedTrainings(rows: EvaluationRow[]): TrainingSummary[]
   const grouped = new Map<string, EvaluationRow[]>()
 
   for (const row of rows) {
-    const key = `${normalizeTrainingTitle(row.training_title)}|||${row.training_date}`
+    const key = `${normalizeTrainingTitleForGrouping(row.training_title)}|||${row.training_date}`
     const existing = grouped.get(key) ?? []
     existing.push(row)
     grouped.set(key, existing)
@@ -88,7 +98,14 @@ export function buildUploadedTrainings(rows: EvaluationRow[]): TrainingSummary[]
     .sort((a, b) => b.trainingDate.localeCompare(a.trainingDate))
 }
 
+/** All rows for a program card (includes every spelling variant in the group). */
 export function filterRowsByTrainingTitle(rows: EvaluationRow[], trainingTitle: string): EvaluationRow[] {
+  const target = normalizeTrainingTitleForGrouping(trainingTitle)
+  return rows.filter((row) => normalizeTrainingTitleForGrouping(row.training_title) === target)
+}
+
+/** Strict match by single normalized spelling (used after DB title merge). */
+export function filterRowsByExactTrainingTitle(rows: EvaluationRow[], trainingTitle: string): EvaluationRow[] {
   const target = normalizeTrainingTitle(trainingTitle)
   return rows.filter((row) => normalizeTrainingTitle(row.training_title) === target)
 }

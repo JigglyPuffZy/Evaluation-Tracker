@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { DonutChart } from '../components/charts/DonutChart'
 import { PercentageBar } from '../components/charts/PercentageBar'
@@ -10,8 +10,10 @@ import { ScoreRing } from '../components/ui/ScoreRing'
 import { Section } from '../components/ui/Section'
 import { useEvaluationData } from '../context/EvaluationDataContext'
 import { computeEvaluationStats } from '../lib/computeEvaluationStats'
-import { filterRowsByTrainingTitle } from '../lib/buildTrainingSummaries'
+import { buildTrainingSummariesByTitle, filterRowsByTrainingTitle } from '../lib/buildTrainingSummaries'
+import { openTrainingReportWindow } from '../lib/exportTrainingReport'
 import { getRowOverallAverage } from '../lib/evaluationRow'
+import { Button } from '../components/ui/Button'
 import { PartVIComments } from '../components/evaluation/PartVIComments'
 import { PART_VI_SECTION, RATING_SCALE_MAX, type EvaluationRow } from '../types/evaluation'
 
@@ -81,9 +83,12 @@ function UsersIcon() {
   )
 }
 
+const BENCHMARK_SCORE = 3.5
+
 export function ProgramDetailPage() {
   const { programId } = useParams<{ programId: string }>()
   const { rows, sourceLabel, hasUploads } = useEvaluationData()
+  const [reportError, setReportError] = useState('')
 
   let trainingTitle = ''
   if (programId) {
@@ -101,8 +106,30 @@ export function ProgramDetailPage() {
 
   const stats = useMemo(() => computeEvaluationStats(trainingRows), [trainingRows])
   const dateStats = useMemo(() => computeDateStats(trainingRows), [trainingRows])
+  const trainingSummary = useMemo(
+    () => buildTrainingSummariesByTitle(trainingRows)[0],
+    [trainingRows],
+  )
 
   const primaryDate = dateStats[0]
+  const meetsBenchmark = stats.overallAverage >= BENCHMARK_SCORE
+
+  function handleExportReport() {
+    if (!trainingSummary) {
+      return
+    }
+
+    setReportError('')
+    try {
+      openTrainingReportWindow({
+        training: trainingSummary,
+        stats,
+        rows: trainingRows,
+      })
+    } catch (error) {
+      setReportError(error instanceof Error ? error.message : 'Could not open report.')
+    }
+  }
 
   if (!trainingTitle) {
     return <Navigate to="/" replace />
@@ -164,6 +191,9 @@ export function ProgramDetailPage() {
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <Badge tone="accent">{sourceLabel}</Badge>
                       <Badge tone="neutral">4-point scale</Badge>
+                      <Badge tone={meetsBenchmark ? 'good' : 'warn'}>
+                        Benchmark {BENCHMARK_SCORE.toFixed(1)} — {meetsBenchmark ? 'Met' : 'Below'}
+                      </Badge>
                     </div>
 
                     <h1 className="mt-4 text-2xl font-semibold leading-tight tracking-tight text-ink md:text-3xl">
@@ -172,16 +202,32 @@ export function ProgramDetailPage() {
 
                     <p className="mt-2.5 text-sm leading-relaxed text-muted">
                       DOST Training Evaluation results for this training only.
+                      {trainingSummary && trainingSummary.titleVariantCount > 1
+                        ? ` Combined ${trainingSummary.titleVariantCount} title variants from the form into one program view.`
+                        : ''}
                     </p>
 
                   <div className="mt-5 flex flex-wrap gap-2">
-                    {primaryDate ? (
+                    {dateStats.length > 1 ? (
+                      <span className="meta-pill">
+                        <CalendarIcon />
+                        {dateStats.length} sessions
+                      </span>
+                    ) : primaryDate ? (
                       <span className="meta-pill">
                         <CalendarIcon />
                         {primaryDate.date}
                       </span>
                     ) : null}
-                    {primaryDate?.venue ? (
+                    {trainingSummary && trainingSummary.venues.length > 1 ? (
+                      <span
+                        className="meta-pill"
+                        title={trainingSummary.venues.join(' · ')}
+                      >
+                        <PinIcon />
+                        {trainingSummary.venues.length} venues
+                      </span>
+                    ) : primaryDate?.venue ? (
                       <span className="meta-pill">
                         <PinIcon />
                         {primaryDate.venue}
@@ -191,19 +237,40 @@ export function ProgramDetailPage() {
                       <UsersIcon />
                       {stats.totalResponses} evaluation{stats.totalResponses === 1 ? '' : 's'}
                     </span>
+                    {trainingSummary && trainingSummary.titleVariantCount > 1 ? (
+                      <span className="meta-pill">{trainingSummary.titleVariantCount} title variants</span>
+                    ) : null}
                   </div>
+                  {trainingSummary && trainingSummary.venues.length > 1 ? (
+                    <ul className="mt-3 space-y-1">
+                      {trainingSummary.venues.map((venue) => (
+                        <li key={venue} className="text-xs text-muted">
+                          · {venue}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                   </div>
                 </div>
 
-                <div className="flex justify-center lg:justify-end">
+                <div className="flex flex-col items-center gap-3 lg:items-end">
                   <ScoreRing
                     average={stats.overallAverage}
                     percent={stats.overallPercent}
                     max={RATING_SCALE_MAX}
                     size={128}
                   />
+                  <Button variant="secondary" size="sm" onClick={handleExportReport}>
+                    Export report (PDF)
+                  </Button>
                 </div>
               </div>
+
+              {reportError ? (
+                <p className="mt-4 rounded-xl border border-warn/30 bg-warn-soft px-4 py-3 text-sm text-warn">
+                  {reportError}
+                </p>
+              ) : null}
 
               <div className="mt-6 border-t border-line/60 pt-6">
                 <div className="rounded-xl bg-surface/50 px-4 py-3 sm:max-w-xs">

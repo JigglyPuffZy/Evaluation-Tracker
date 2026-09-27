@@ -1,23 +1,19 @@
 -- =============================================================================
--- DOST RO2 Evaluation Tracker — FULL SETUP (run once in Supabase SQL Editor)
--- Project: fatvwpnqoexvdneevgof
+-- DOST RO2 Evaluation Tracker — ONE-PASTE FULL SETUP
+-- Project: ljojasxfgqlnqswkfoqm
 --
 -- Steps:
 --   1. Supabase Dashboard → SQL Editor → New query
---   2. Paste this ENTIRE file → Run
---   3. Authentication → Users → Add user (email + password)
---   4. Sign in on the app
+--   2. Paste this ENTIRE file → Run (once)
+--   3. Sign in on the app: jeffson@gmail.com / 123Admin
+--
+-- Includes: schema, RLS, seed data (23 rows), admin user, and verify queries.
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
 -- RESET (drops old objects so re-run works)
+-- Note: drop tables FIRST — dropping triggers on a missing table causes 42P01.
 -- ---------------------------------------------------------------------------
-drop trigger if exists evaluations_sync_training on public.evaluations;
-drop trigger if exists evaluations_set_updated_at on public.evaluations;
-drop trigger if exists trainings_set_updated_at on public.trainings;
-drop trigger if exists profiles_set_updated_at on public.profiles;
-drop trigger if exists on_auth_user_created on auth.users;
-
 drop view if exists public.training_stats;
 drop view if exists public.evaluation_summary;
 
@@ -25,6 +21,8 @@ drop table if exists public.evaluations cascade;
 drop table if exists public.import_batches cascade;
 drop table if exists public.trainings cascade;
 drop table if exists public.profiles cascade;
+
+drop trigger if exists on_auth_user_created on auth.users;
 
 drop type if exists public.import_source cascade;
 drop type if exists public.app_role cascade;
@@ -326,7 +324,7 @@ grant select, insert, update, delete on public.import_batches to authenticated;
 grant select on public.evaluation_summary to authenticated;
 grant select on public.training_stats to authenticated;
 
--- Backfill profiles for users created BEFORE this script
+-- Backfill profiles for users created BEFORE this script (preserve existing roles)
 insert into public.profiles (id, email, full_name, role)
 select
   u.id,
@@ -334,7 +332,88 @@ select
   coalesce(u.raw_user_meta_data ->> 'full_name', split_part(u.email, '@', 1)),
   'staff'
 from auth.users u
-on conflict (id) do update set role = 'staff', is_active = true;
+on conflict (id) do update set
+  email = excluded.email,
+  full_name = excluded.full_name,
+  is_active = true;
+
+-- ---------------------------------------------------------------------------
+-- ADMIN USER — jeffson@gmail.com / 123Admin (no separate script needed)
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  admin_user_id uuid;
+  admin_email constant text := 'jeffson@gmail.com';
+  admin_password constant text := '123Admin';
+begin
+  select id into admin_user_id from auth.users where email = admin_email;
+
+  if admin_user_id is null then
+    admin_user_id := gen_random_uuid();
+
+    insert into auth.users (
+      instance_id,
+      id,
+      aud,
+      role,
+      email,
+      encrypted_password,
+      email_confirmed_at,
+      raw_app_meta_data,
+      raw_user_meta_data,
+      created_at,
+      updated_at,
+      confirmation_token,
+      recovery_token,
+      email_change_token_new,
+      email_change
+    ) values (
+      '00000000-0000-0000-0000-000000000000',
+      admin_user_id,
+      'authenticated',
+      'authenticated',
+      admin_email,
+      crypt(admin_password, gen_salt('bf')),
+      timezone('utc', now()),
+      '{"provider":"email","providers":["email"]}'::jsonb,
+      '{"full_name":"Jeffson"}'::jsonb,
+      timezone('utc', now()),
+      timezone('utc', now()),
+      '',
+      '',
+      '',
+      ''
+    );
+
+    insert into auth.identities (
+      id,
+      user_id,
+      provider_id,
+      identity_data,
+      provider,
+      last_sign_in_at,
+      created_at,
+      updated_at
+    ) values (
+      gen_random_uuid(),
+      admin_user_id,
+      admin_user_id::text,
+      jsonb_build_object('sub', admin_user_id::text, 'email', admin_email),
+      'email',
+      timezone('utc', now()),
+      timezone('utc', now()),
+      timezone('utc', now())
+    );
+  end if;
+
+  insert into public.profiles (id, email, full_name, role, is_active)
+  values (admin_user_id, admin_email, 'Jeffson', 'admin', true)
+  on conflict (id) do update set
+    email = excluded.email,
+    full_name = excluded.full_name,
+    role = 'admin',
+    is_active = true;
+end $$;
 
 -- ---------------------------------------------------------------------------
 -- SEED DATA — 23 rows from your Google Form Excel export
@@ -377,8 +456,9 @@ insert into public.evaluations (
   (timezone('utc', timestamp '2026-04-21 15:37:55'), 'Roy Angelo Gaffud', '09669539052', 'Smart and Sustainable Community Program (SSCP) Roadmapping Workshop', 'Mayor''s Office LGU Echague', '2026-04-20', 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 'N/A', 'N/A');
 
 -- ---------------------------------------------------------------------------
--- VERIFY
+-- VERIFY (results appear below after Run)
 -- ---------------------------------------------------------------------------
 select count(*) as evaluation_count from public.evaluations;
 select count(*) as training_count from public.trainings;
+select email, full_name, role, is_active from public.profiles where email = 'jeffson@gmail.com';
 select * from public.training_stats order by response_count desc limit 10;

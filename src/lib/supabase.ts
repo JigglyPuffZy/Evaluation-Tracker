@@ -1,16 +1,44 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { resilientFetch } from './resilientFetch'
+import {
+  formatSupabaseNetworkError,
+  getSupabaseApiKey,
+  getSupabaseConfigError,
+  getSupabaseUrl,
+} from './supabaseEnv'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const configError = getSupabaseConfigError()
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase env vars. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env',
-  )
+if (configError) {
+  throw new Error(configError)
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+const supabaseUrl = getSupabaseUrl()
+const supabaseKey = getSupabaseApiKey()
+
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+  global: {
+    fetch: (input, init) =>
+      resilientFetch(input, init).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : 'Failed to fetch'
+        throw new Error(formatSupabaseNetworkError(message))
+      }),
+  },
+})
 
 export function isSupabaseConfigured(): boolean {
-  return Boolean(supabaseUrl && supabaseAnonKey)
+  return getSupabaseConfigError() === null
+}
+
+export function getSupabaseProjectHost(): string {
+  try {
+    return new URL(supabaseUrl).host
+  } catch {
+    return supabaseUrl
+  }
 }

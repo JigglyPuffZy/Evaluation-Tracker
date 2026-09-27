@@ -129,3 +129,94 @@ export async function deleteAllEvaluationsFromSupabase(): Promise<void> {
     throw new Error(error.message)
   }
 }
+
+async function createImportBatch(fileName: string, rowCount: number, userId: string | undefined, notes: string) {
+  const { data: batch, error: batchError } = await supabase
+    .from('import_batches')
+    .insert({
+      source: fileName.toLowerCase().endsWith('.csv') ? 'csv' : 'excel',
+      file_name: fileName,
+      row_count: rowCount,
+      imported_by: userId ?? null,
+      notes,
+    })
+    .select('id')
+    .single()
+
+  if (batchError) {
+    throw new Error(batchError.message)
+  }
+
+  return batch.id as string
+}
+
+export async function mergeImportToSupabase(
+  toInsert: EvaluationRow[],
+  toMerge: Array<{ existingId: string; incoming: EvaluationRow }>,
+  fileName: string,
+  userId: string | undefined,
+): Promise<{ inserted: number; merged: number }> {
+  const total = toInsert.length + toMerge.length
+  if (total === 0) {
+    return { inserted: 0, merged: 0 }
+  }
+
+  const batchId = await createImportBatch(
+    fileName,
+    total,
+    userId,
+    'Merged import — updated duplicates + inserted new rows',
+  )
+
+  for (const { existingId, incoming } of toMerge) {
+    const { error } = await supabase
+      .from('evaluations')
+      .update({
+        ...evaluationToInsert(incoming, userId),
+        import_batch_id: batchId,
+      })
+      .eq('id', existingId)
+
+    if (error) {
+      throw new Error(error.message)
+    }
+  }
+
+  if (toInsert.length > 0) {
+    const payload = toInsert.map((row) => ({
+      ...evaluationToInsert(row, userId),
+      import_batch_id: batchId,
+    }))
+
+    const { error: insertError } = await supabase.from('evaluations').insert(payload)
+    if (insertError) {
+      throw new Error(insertError.message)
+    }
+  }
+
+  return { inserted: toInsert.length, merged: toMerge.length }
+}
+
+export async function mergeTrainingTitlesInSupabase(
+  sourceTitles: string[],
+  canonicalTitle: string,
+): Promise<number> {
+  const trimmedCanonical = canonicalTitle.trim()
+  const trimmedSources = sourceTitles.map((title) => title.trim()).filter(Boolean)
+
+  if (!trimmedCanonical || trimmedSources.length === 0) {
+    return 0
+  }
+
+  const { data, error } = await supabase
+    .from('evaluations')
+    .update({ training_title: trimmedCanonical })
+    .in('training_title', trimmedSources)
+    .select('id')
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return data?.length ?? 0
+}

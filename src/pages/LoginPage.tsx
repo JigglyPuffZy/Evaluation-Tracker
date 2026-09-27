@@ -1,62 +1,15 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ThemeToggle } from '../components/ui/ThemeToggle'
+import { LoginShowcase } from '../components/auth/LoginShowcase'
 import { BrandLogo } from '../components/ui/BrandLogo'
 import { useAuth } from '../context/AuthContext'
 
-const features = [
-  {
-    title: 'Program insights',
-    description: 'Dashboards with scores, trends, and session breakdowns.',
-  },
-  {
-    title: 'Excel import',
-    description: 'Bring evaluation sheets in and see results instantly.',
-  },
-  {
-    title: 'Role-ready',
-    description: 'Built for trainers across DOST RO2 programs.',
-  },
-] as const
-
-function MailIcon() {
+function Spinner() {
   return (
-    <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v9A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-9Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <path
-        d="m5 8 7 5 7-5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function LockIcon() {
-  return (
-    <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect
-        x="5"
-        y="11"
-        width="14"
-        height="10"
-        rx="2"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <path
-        d="M8 11V8a4 4 0 1 1 8 0v3"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
+    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+      <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.4 0 0 5.4 0 12h4Z" />
     </svg>
   )
 }
@@ -64,7 +17,7 @@ function LockIcon() {
 function EyeIcon({ open }: { open: boolean }) {
   if (open) {
     return (
-      <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path
           d="M2.5 12.5C4.2 8.8 7.8 6.5 12 6.5s7.8 2.3 9.5 6c-1.7 3.2-5.3 5.5-9.5 5.5S4.2 15.7 2.5 12.5Z"
           stroke="currentColor"
@@ -74,11 +27,10 @@ function EyeIcon({ open }: { open: boolean }) {
       </svg>
     )
   }
-
   return (
-    <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
-        d="M3 3l18 18M10.6 10.6A2.5 2.5 0 0 0 12 15.5M6.7 6.9C8.4 5.7 10.1 5 12 5c4.2 0 7.8 2.3 9.5 6a10.4 10.4 0 0 1-2.3 3.4M9.9 9.9A4 4 0 0 1 14 14"
+        d="M3 3l18 18M10.6 10.6A2.5 2.5 0 0 0 12 15.5"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
@@ -87,29 +39,73 @@ function EyeIcon({ open }: { open: boolean }) {
   )
 }
 
-function Spinner() {
+function MailIcon() {
   return (
-    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-      <path
-        className="opacity-90"
-        fill="currentColor"
-        d="M4 12a8 8 0 0 1 8-8V0C5.4 0 0 5.4 0 12h4Z"
-      />
+    <svg className="h-[1.125rem] w-[1.125rem]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="m3 7 9 6 9-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   )
 }
 
+function LockIcon() {
+  return (
+    <svg className="h-[1.125rem] w-[1.125rem]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  )
+}
+
+const features = [
+  {
+    title: 'Import in seconds',
+    desc: 'Drop Google Form Excel files and map columns automatically.',
+  },
+  {
+    title: 'Radar breakdown',
+    desc: 'Visualize Parts I–V with session-level drill-down.',
+  },
+  {
+    title: 'One regional hub',
+    desc: 'Every DOST RO2 training evaluation in a single workspace.',
+  },
+] as const
+
 export function LoginPage() {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, resetPassword } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
   const [error, setError] = useState('')
+  const [resetMessage, setResetMessage] = useState('')
   const [shakeForm, setShakeForm] = useState(false)
+
+  async function handleForgotPassword() {
+    setError('')
+    setResetMessage('')
+
+    if (!email.trim()) {
+      setError('Enter your email above, then click Forgot password.')
+      setShakeForm(true)
+      return
+    }
+
+    setIsResetting(true)
+    try {
+      await resetPassword(email.trim())
+      setResetMessage('Password reset link sent. Check your inbox (and spam folder).')
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not send reset email.')
+      setShakeForm(true)
+    } finally {
+      setIsResetting(false)
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -122,14 +118,11 @@ export function LoginPage() {
     }
 
     setIsSubmitting(true)
-
     try {
       await login(email.trim(), password)
       navigate('/', { replace: true })
     } catch (caught) {
-      const message =
-        caught instanceof Error ? caught.message : 'Sign in failed. Check your credentials.'
-      setError(message)
+      setError(caught instanceof Error ? caught.message : 'Sign in failed.')
       setShakeForm(true)
     } finally {
       setIsSubmitting(false)
@@ -137,134 +130,123 @@ export function LoginPage() {
   }
 
   return (
-    <div className="login-page login-atmosphere relative flex min-h-svh items-center justify-center overflow-hidden px-4 py-8 sm:px-6 sm:py-10">
-      <div className="login-orb login-orb-a" aria-hidden="true" />
-      <div className="login-orb login-orb-b" aria-hidden="true" />
-      <div className="login-orb login-orb-c" aria-hidden="true" />
-      <div className="login-spark login-spark-a" aria-hidden="true" />
-      <div className="login-spark login-spark-b" aria-hidden="true" />
-      <div className="absolute inset-0 login-grid opacity-100" aria-hidden="true" />
+    <div className="login-gate">
+      <aside className="login-gate-showcase" aria-hidden="true">
+        <div className="login-gate-showcase-bg">
+          <div className="login-gate-orb login-gate-orb-a" />
+          <div className="login-gate-orb login-gate-orb-b" />
+          <div className="login-gate-grid" />
+        </div>
 
-      <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
-        <ThemeToggle variant="login" />
-      </div>
-
-      <div className="login-card relative z-10 grid w-full max-w-5xl overflow-hidden lg:grid-cols-[1.08fr_0.92fr]">
-        <section className="login-brand-panel animate-rise relative hidden flex-col justify-between overflow-hidden p-10 lg:flex">
-          <div className="login-brand-glow" aria-hidden="true" />
-
-          <div className="relative">
-            <div className="login-brand-badge">
-              <BrandLogo size="sm" withBackground={false} className="!h-5 !w-5 rounded-none bg-transparent p-0 shadow-none" />
-              DOST Regional Office No. 02
-            </div>
-
-            <h1 className="login-brand-title type-title-lg mt-8 max-w-md text-white">
-              Training Evaluation
-              <span className="login-brand-gradient block">Analytics Platform</span>
-            </h1>
-
-            <p className="type-body mt-4 max-w-sm text-white/78">
-              Monitor program quality, trainer performance, and participant feedback in one
-              polished workspace designed for regional training teams.
-            </p>
+        <div className="login-gate-showcase-inner animate-rise">
+          <div className="login-gate-showcase-brand">
+            <BrandLogo size="md" withBackground={false} className="login-gate-logo" />
+            <span>DOST RO2</span>
           </div>
 
-          <div className="relative mt-10 space-y-3">
-            {features.map((feature, index) => (
-              <article
-                key={feature.title}
-                className={[
-                  'login-feature-card',
-                  index === 0 ? 'animate-rise-delay-1' : '',
-                  index === 1 ? 'animate-rise-delay-2' : '',
-                  index === 2 ? 'animate-rise-delay-3' : '',
-                ].join(' ')}
-              >
-                <span className="login-feature-icon" aria-hidden="true">
-                  {index + 1}
+          <h2 className="login-gate-showcase-title">
+            Training evaluations,
+            <span className="block">visualized beautifully.</span>
+          </h2>
+
+          <p className="login-gate-showcase-lead">
+            From spreadsheet rows to radar charts — built for regional evaluators who need clarity, not clutter.
+          </p>
+
+          <LoginShowcase />
+
+          <ul className="login-gate-features">
+            {features.map((f) => (
+              <li key={f.title}>
+                <span className="login-gate-feature-icon" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5">
+                    <path
+                      d="M5 10.5 8.5 14 15 7"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                 </span>
-                <div>
-                  <p className="text-sm font-semibold text-white">{feature.title}</p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-white/68">
-                    {feature.description}
-                  </p>
-                </div>
-              </article>
+                <span>
+                  <strong>{f.title}</strong>
+                  <span>{f.desc}</span>
+                </span>
+              </li>
             ))}
-          </div>
-        </section>
+          </ul>
+        </div>
+      </aside>
 
-        <section className="login-form-panel animate-rise-delay-1 relative px-6 py-9 sm:px-10 sm:py-11">
-          <div className="login-form-glow" aria-hidden="true" />
-
-          <div className="relative">
-            <div className="lg:hidden">
-              <div className="mb-3 flex items-center gap-2.5">
-                <BrandLogo size="md" />
-                <div>
-                  <p className="login-form-kicker">DOST RO2</p>
-                  <h1 className="login-form-title type-title-md">Sign in</h1>
-                </div>
-              </div>
+      <main className="login-gate-main">
+        <div className="login-gate-main-inner">
+          <header className="login-gate-mobile-brand lg:hidden">
+            <BrandLogo size="md" />
+            <div>
+              <p className="login-gate-mobile-title">Evaluation Tracker</p>
+              <p className="login-gate-mobile-sub">DOST RO2 · Sign in to continue</p>
             </div>
+          </header>
 
-            <div className="hidden lg:block">
-              <div className="mb-6 flex items-center gap-3">
+          <div className={`login-gate-card animate-rise ${shakeForm ? 'login-shake' : ''}`}>
+            <header className="login-gate-card-head">
+              <div className="hidden lg:block">
                 <BrandLogo size="lg" />
-                <div>
-                  <p className="login-form-kicker">DOST RO2</p>
-                  <h2 className="login-form-title type-title-lg">Welcome back</h2>
-                </div>
               </div>
-              <p className="login-form-subtitle max-w-xs">
-                Sign in to access dashboards, training records, and evaluation insights.
-              </p>
-            </div>
+              <div>
+                <p className="type-kicker text-accent">Secure sign in</p>
+                <h1 className="login-gate-heading">Welcome back</h1>
+                <p className="login-gate-subheading">
+                  Enter your credentials to open the evaluation dashboard.
+                </p>
+              </div>
+            </header>
 
             <form
-              className={`relative mt-8 space-y-5 ${shakeForm ? 'login-shake' : ''}`}
+              className="login-gate-form"
               onSubmit={handleSubmit}
               onAnimationEnd={() => setShakeForm(false)}
               noValidate
             >
-              <label className="block">
-                <span className="login-label">Work email</span>
-                <span className="input-field-wrap">
-                  <span className="login-input-icon">
+              <label className="login-gate-field">
+                <span className="login-gate-label">Email address</span>
+                <span className="login-gate-input-wrap">
+                  <span className="login-gate-input-icon">
                     <MailIcon />
                   </span>
                   <input
                     type="email"
                     required
+                    autoFocus
                     value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    className="login-input input-field-with-icon"
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="login-gate-input"
                     autoComplete="email"
                     placeholder="you@dost.gov.ph"
                   />
                 </span>
               </label>
 
-              <label className="block">
-                <span className="login-label">Password</span>
-                <span className="input-field-wrap">
-                  <span className="login-input-icon">
+              <label className="login-gate-field">
+                <span className="login-gate-label">Password</span>
+                <span className="login-gate-input-wrap">
+                  <span className="login-gate-input-icon">
                     <LockIcon />
                   </span>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
                     value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className="login-input input-field-with-icon input-field-with-action"
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="login-gate-input login-gate-input-password"
                     autoComplete="current-password"
                     placeholder="Enter your password"
                   />
                   <button
                     type="button"
-                    className="login-input-action"
-                    onClick={() => setShowPassword((current) => !current)}
+                    className="login-gate-eye"
+                    onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     <EyeIcon open={showPassword} />
@@ -272,55 +254,71 @@ export function LoginPage() {
                 </span>
               </label>
 
-              <div className="flex items-center justify-between gap-3 text-sm">
-                <label className="login-remember inline-flex cursor-pointer items-center gap-2">
+              <div className="login-gate-meta">
+                <label className="login-gate-remember">
                   <input
                     type="checkbox"
                     checked={remember}
-                    onChange={(event) => setRemember(event.target.checked)}
+                    onChange={(e) => setRemember(e.target.checked)}
                     className="login-checkbox"
                   />
                   Remember me
                 </label>
-                <button type="button" className="login-link">
-                  Forgot password?
+                <button
+                  type="button"
+                  className="login-link text-sm"
+                  onClick={() => void handleForgotPassword()}
+                  disabled={isResetting}
+                >
+                  {isResetting ? 'Sending link…' : 'Forgot password?'}
                 </button>
               </div>
 
+              {resetMessage ? (
+                <p className="rounded-xl border border-good/25 bg-good-soft px-4 py-3 text-sm text-good">
+                  {resetMessage}
+                </p>
+              ) : null}
+
               {error ? <p className="login-error">{error}</p> : null}
 
-              <button type="submit" className="login-submit" disabled={isSubmitting}>
+              <button type="submit" className="login-gate-submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Spinner />
                     Signing in…
                   </>
                 ) : (
-                  'Sign in to dashboard'
+                  <>
+                    Continue to dashboard
+                    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+                      <path
+                        d="M7.5 4.5 13 10l-5.5 5.5"
+                        stroke="currentColor"
+                        strokeWidth="1.75"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </>
                 )}
               </button>
             </form>
 
-            <p className="login-footer mt-7 flex items-center justify-center gap-2 text-center text-xs">
-              <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d="M12 3 4 7v5c0 4.4 3.4 8.5 8 10 4.6-1.5 8-5.6 8-10V7l-8-4Z"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                />
-                <path
-                  d="m9.5 12 1.8 1.8L15 10.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+            <p className="login-gate-footnote">
+              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 shrink-0 text-good" aria-hidden="true">
+                <path d="M12 3 4 7v5c0 4.4 3.4 8.5 8 10 4.6-1.5 8-5.6 8-10V7l-8-4Z" stroke="currentColor" strokeWidth="1.5" />
               </svg>
-              Secure regional workspace · Authorized personnel only
+              Authorized DOST RO2 personnel only
             </p>
           </div>
-        </section>
-      </div>
+
+          <ul className="login-gate-mobile-features lg:hidden">
+            {features.map((f) => (
+              <li key={f.title}>{f.title}</li>
+            ))}
+          </ul>
+        </div>
+      </main>
     </div>
   )
 }
