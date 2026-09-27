@@ -4,7 +4,8 @@ import {
   formatSupabaseNetworkError,
   getSupabaseApiKey,
   getSupabaseConfigError,
-  getSupabaseUrl,
+  getSupabaseDirectUrl,
+  resolveSupabaseUrl,
 } from './supabaseEnv'
 
 const configError = getSupabaseConfigError()
@@ -13,23 +14,26 @@ if (configError) {
   throw new Error(configError)
 }
 
-const supabaseUrl = getSupabaseUrl()
 const supabaseKey = getSupabaseApiKey()
 
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey, {
+function createSupabaseClient(): SupabaseClient {
+  return createClient(resolveSupabaseUrl(), supabaseKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },
-  global: {
-    fetch: (input, init) =>
-      resilientFetch(input, init).catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : 'Failed to fetch'
-        throw new Error(formatSupabaseNetworkError(message))
-      }),
-  },
-})
+    global: {
+      fetch: (input, init) =>
+        resilientFetch(input, init).catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : 'Failed to fetch'
+          throw new Error(formatSupabaseNetworkError(message))
+        }),
+    },
+  })
+}
+
+export const supabase: SupabaseClient = createSupabaseClient()
 
 export function isSupabaseConfigured(): boolean {
   return getSupabaseConfigError() === null
@@ -37,8 +41,8 @@ export function isSupabaseConfigured(): boolean {
 
 export function getSupabaseProjectHost(): string {
   try {
-    return new URL(supabaseUrl).host
+    return new URL(getSupabaseDirectUrl()).host
   } catch {
-    return supabaseUrl
+    return getSupabaseDirectUrl()
   }
 }

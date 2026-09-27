@@ -7,8 +7,33 @@ function readEnv(name: keyof ImportMetaEnv): string {
   return value.trim()
 }
 
-export function getSupabaseUrl(): string {
+export function getSupabaseDirectUrl(): string {
   return readEnv('VITE_SUPABASE_URL').replace(/\/+$/, '')
+}
+
+/** @deprecated alias — use getSupabaseDirectUrl for the real Supabase host. */
+export function getSupabaseUrl(): string {
+  return getSupabaseDirectUrl()
+}
+
+export function isSupabaseProxyEnabled(): boolean {
+  const flag = readEnv('VITE_SUPABASE_USE_PROXY')
+  return flag === '' || flag === 'true' || flag === '1'
+}
+
+/** Browser URL for Supabase API — uses same-origin proxy to avoid Chrome QUIC errors. */
+export function resolveSupabaseUrl(): string {
+  const direct = getSupabaseDirectUrl()
+
+  if (
+    typeof window !== 'undefined' &&
+    isSupabaseProxyEnabled() &&
+    direct.length > 0
+  ) {
+    return `${window.location.origin}/api/supabase`
+  }
+
+  return direct
 }
 
 /** Prefer publishable key (new Supabase projects); fall back to legacy anon JWT. */
@@ -39,7 +64,7 @@ function getProjectRefFromJwt(jwt: string): string | null {
 }
 
 export function getSupabaseConfigError(): string | null {
-  const url = getSupabaseUrl()
+  const url = getSupabaseDirectUrl()
   const key = getSupabaseApiKey()
 
   if (!url || !key) {
@@ -89,9 +114,11 @@ export function formatSupabaseNetworkError(message: string): string {
 
   if (lower.includes('quic') || lower.includes('err_quic')) {
     return [
-      'Browser network error (QUIC / HTTP3). Supabase is up, but Chrome failed the connection.',
-      'Try: hard refresh (Ctrl+Shift+R), turn off VPN, or disable QUIC in Chrome at chrome://flags (#enable-quic → Disabled), then restart the browser.',
-      'You can also try Edge or Firefox.',
+      'Chrome blocked the Supabase connection (QUIC / HTTP3).',
+      isSupabaseProxyEnabled()
+        ? 'Proxy mode is on — restart npm run dev, hard refresh (Ctrl+Shift+R), and redeploy if this is the live site.'
+        : 'Set VITE_SUPABASE_USE_PROXY=true in .env, restart npm run dev, and redeploy.',
+      'If it still fails: turn off VPN, try Edge/Firefox, or disable QUIC in chrome://flags.',
     ].join(' ')
   }
 
