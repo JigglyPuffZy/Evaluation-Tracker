@@ -36,9 +36,27 @@ export function resolveSupabaseUrl(): string {
   return direct
 }
 
-/** Prefer publishable key (new Supabase projects); fall back to legacy anon JWT. */
+/**
+ * Prefer legacy anon JWT when it matches the project URL (most reliable for auth).
+ * Fall back to publishable key, then anon even if refs differ (server will reject mismatches).
+ */
 export function getSupabaseApiKey(): string {
-  return readEnv('VITE_SUPABASE_PUBLISHABLE_KEY') || readEnv('VITE_SUPABASE_ANON_KEY')
+  const anon = readEnv('VITE_SUPABASE_ANON_KEY')
+  const publishable = readEnv('VITE_SUPABASE_PUBLISHABLE_KEY')
+  const urlRef = getSupabaseProjectRefFromUrl()
+
+  if (anon.startsWith('eyJ')) {
+    const jwtRef = getProjectRefFromJwt(anon)
+    if (urlRef && jwtRef === urlRef) {
+      return anon
+    }
+  }
+
+  if (publishable.startsWith('sb_publishable_')) {
+    return publishable
+  }
+
+  return anon || publishable
 }
 
 export function getSupabaseProjectRefFromUrl(url = getSupabaseUrl()): string | null {
@@ -65,6 +83,8 @@ function getProjectRefFromJwt(jwt: string): string | null {
 
 export function getSupabaseConfigError(): string | null {
   const url = getSupabaseDirectUrl()
+  const anon = readEnv('VITE_SUPABASE_ANON_KEY')
+  const publishable = readEnv('VITE_SUPABASE_PUBLISHABLE_KEY')
   const key = getSupabaseApiKey()
 
   if (!url || !key) {
@@ -83,6 +103,14 @@ export function getSupabaseConfigError(): string | null {
       `Supabase env mismatch: VITE_SUPABASE_URL points to "${urlRef}"`,
       `but VITE_SUPABASE_ANON_KEY is for "${jwtRef}".`,
       'Copy URL and keys from the same project in Supabase → Settings → API, then redeploy.',
+    ].join(' ')
+  }
+
+  if (!anon.startsWith('eyJ') && !publishable.startsWith('sb_publishable_')) {
+    return [
+      'Invalid Supabase API key format.',
+      'Set VITE_SUPABASE_ANON_KEY (JWT starting with eyJ…) or VITE_SUPABASE_PUBLISHABLE_KEY (sb_publishable_…)',
+      'from Supabase Dashboard → Settings → API for the same project as VITE_SUPABASE_URL.',
     ].join(' ')
   }
 
@@ -119,6 +147,20 @@ export function formatSupabaseNetworkError(message: string): string {
         ? 'Proxy mode is on — restart npm run dev, hard refresh (Ctrl+Shift+R), and redeploy if this is the live site.'
         : 'Set VITE_SUPABASE_USE_PROXY=true in .env, restart npm run dev, and redeploy.',
       'If it still fails: turn off VPN, try Edge/Firefox, or disable QUIC in chrome://flags.',
+    ].join(' ')
+  }
+
+  if (
+    lower.includes('invalid api key') ||
+    lower.includes('invalid jwt') ||
+    lower.includes('invalid token') ||
+    lower.includes('compactdecodeerror')
+  ) {
+    return [
+      'Invalid Supabase API key for this project.',
+      'Open Supabase Dashboard → Settings → API and copy Project URL + anon (public) key from the same project.',
+      'Local: update .env, then restart npm run dev. Vercel: update env vars and redeploy.',
+      'Remove stale keys or typos in VITE_SUPABASE_PUBLISHABLE_KEY / VITE_SUPABASE_ANON_KEY.',
     ].join(' ')
   }
 
