@@ -1,6 +1,16 @@
 /** Single Supabase project for DOST Evaluation Tracker (must match vercel.json proxy). */
 export const SUPABASE_PROJECT_REF = 'ljojasxfgqlnqswkfoqm'
 
+/** Canonical URL — used when env vars point at the wrong/deleted project (e.g. old Vercel env). */
+export const SUPABASE_CANONICAL_URL = `https://${SUPABASE_PROJECT_REF}.supabase.co`
+
+/**
+ * Canonical anon (public) key — safe in client code; RLS protects data.
+ * Overrides wrong VITE_* values baked in from stale hosting env vars.
+ */
+export const SUPABASE_CANONICAL_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxqb2phc3hmZ3FsbnFzd2tmb3FtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxOTMyNTQsImV4cCI6MjEwNTc2OTI1NH0.ZBqiw7v_Xpv638S1UZbHB7xSNnJQjXFh68fVUqsmZvI'
+
 function readEnv(name: keyof ImportMetaEnv): string {
   const value = import.meta.env[name]
   if (typeof value !== 'string') {
@@ -11,7 +21,11 @@ function readEnv(name: keyof ImportMetaEnv): string {
 }
 
 export function getSupabaseDirectUrl(): string {
-  return readEnv('VITE_SUPABASE_URL').replace(/\/+$/, '')
+  const fromEnv = readEnv('VITE_SUPABASE_URL').replace(/\/+$/, '')
+  if (getSupabaseProjectRefFromUrl(fromEnv) === SUPABASE_PROJECT_REF) {
+    return fromEnv
+  }
+  return SUPABASE_CANONICAL_URL
 }
 
 /** @deprecated alias — use getSupabaseDirectUrl for the real Supabase host. */
@@ -39,27 +53,19 @@ export function resolveSupabaseUrl(): string {
   return direct
 }
 
-/**
- * Prefer legacy anon JWT when it matches the project URL (most reliable for auth).
- * Fall back to publishable key, then anon even if refs differ (server will reject mismatches).
- */
+/** Anon key for this project — ignores env when it belongs to another Supabase project. */
 export function getSupabaseApiKey(): string {
   const anon = readEnv('VITE_SUPABASE_ANON_KEY')
-  const publishable = readEnv('VITE_SUPABASE_PUBLISHABLE_KEY')
-  const urlRef = getSupabaseProjectRefFromUrl()
-
-  if (anon.startsWith('eyJ')) {
-    const jwtRef = getProjectRefFromJwt(anon)
-    if (urlRef && jwtRef === urlRef) {
-      return anon
-    }
+  if (anon.startsWith('eyJ') && getProjectRefFromJwt(anon) === SUPABASE_PROJECT_REF) {
+    return anon
   }
 
+  const publishable = readEnv('VITE_SUPABASE_PUBLISHABLE_KEY')
   if (publishable.startsWith('sb_publishable_')) {
     return publishable
   }
 
-  return anon || publishable
+  return SUPABASE_CANONICAL_ANON_KEY
 }
 
 export function getSupabaseProjectRefFromUrl(url = getSupabaseUrl()): string | null {
@@ -86,43 +92,18 @@ function getProjectRefFromJwt(jwt: string): string | null {
 
 export function getSupabaseConfigError(): string | null {
   const url = getSupabaseDirectUrl()
-  const anon = readEnv('VITE_SUPABASE_ANON_KEY')
-  const publishable = readEnv('VITE_SUPABASE_PUBLISHABLE_KEY')
   const key = getSupabaseApiKey()
 
   if (!url || !key) {
-    return 'Missing Supabase env vars. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (or VITE_SUPABASE_ANON_KEY) to .env, then restart npm run dev.'
+    return 'Supabase is not configured.'
   }
 
-  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) {
-    return `Invalid VITE_SUPABASE_URL: "${url}". Expected https://your-project.supabase.co`
+  if (getSupabaseProjectRefFromUrl(url) !== SUPABASE_PROJECT_REF) {
+    return `Supabase URL must be ${SUPABASE_CANONICAL_URL}.`
   }
 
-  const urlRef = getSupabaseProjectRefFromUrl(url)
-  const jwtRef = getProjectRefFromJwt(anon)
-
-  if (urlRef && urlRef !== SUPABASE_PROJECT_REF) {
-    return [
-      `Wrong Supabase project in VITE_SUPABASE_URL: "${urlRef}".`,
-      `This app requires "${SUPABASE_PROJECT_REF}".`,
-      'Update .env (local) or Vercel env vars, then restart / redeploy.',
-    ].join(' ')
-  }
-
-  if (urlRef && jwtRef && urlRef !== jwtRef) {
-    return [
-      `Supabase env mismatch: VITE_SUPABASE_URL points to "${urlRef}"`,
-      `but VITE_SUPABASE_ANON_KEY is for "${jwtRef}".`,
-      'Copy URL and keys from the same project in Supabase → Settings → API, then redeploy.',
-    ].join(' ')
-  }
-
-  if (!anon.startsWith('eyJ') && !publishable.startsWith('sb_publishable_')) {
-    return [
-      'Invalid Supabase API key format.',
-      'Set VITE_SUPABASE_ANON_KEY (JWT starting with eyJ…) or VITE_SUPABASE_PUBLISHABLE_KEY (sb_publishable_…)',
-      'from Supabase Dashboard → Settings → API for the same project as VITE_SUPABASE_URL.',
-    ].join(' ')
+  if (getProjectRefFromJwt(key) !== SUPABASE_PROJECT_REF) {
+    return `Supabase anon key must belong to project ${SUPABASE_PROJECT_REF}.`
   }
 
   return null
