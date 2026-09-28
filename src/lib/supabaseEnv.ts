@@ -1,3 +1,6 @@
+/** Single Supabase project for DOST Evaluation Tracker (must match vercel.json proxy). */
+export const SUPABASE_PROJECT_REF = 'ljojasxfgqlnqswkfoqm'
+
 function readEnv(name: keyof ImportMetaEnv): string {
   const value = import.meta.env[name]
   if (typeof value !== 'string') {
@@ -96,7 +99,15 @@ export function getSupabaseConfigError(): string | null {
   }
 
   const urlRef = getSupabaseProjectRefFromUrl(url)
-  const jwtRef = getProjectRefFromJwt(readEnv('VITE_SUPABASE_ANON_KEY'))
+  const jwtRef = getProjectRefFromJwt(anon)
+
+  if (urlRef && urlRef !== SUPABASE_PROJECT_REF) {
+    return [
+      `Wrong Supabase project in VITE_SUPABASE_URL: "${urlRef}".`,
+      `This app requires "${SUPABASE_PROJECT_REF}".`,
+      'Update .env (local) or Vercel env vars, then restart / redeploy.',
+    ].join(' ')
+  }
 
   if (urlRef && jwtRef && urlRef !== jwtRef) {
     return [
@@ -115,6 +126,16 @@ export function getSupabaseConfigError(): string | null {
   }
 
   return null
+}
+
+export function isSupabaseApiKeyError(message: string): boolean {
+  const lower = message.toLowerCase()
+  return (
+    lower.includes('invalid api key') ||
+    lower.includes('invalid jwt') ||
+    lower.includes('invalid token') ||
+    lower.includes('compactdecodeerror')
+  )
 }
 
 export function isSupabaseNameResolutionError(message: string): boolean {
@@ -150,17 +171,22 @@ export function formatSupabaseNetworkError(message: string): string {
     ].join(' ')
   }
 
-  if (
-    lower.includes('invalid api key') ||
-    lower.includes('invalid jwt') ||
-    lower.includes('invalid token') ||
-    lower.includes('compactdecodeerror')
-  ) {
+  if (isSupabaseApiKeyError(message)) {
+    const urlRef = getSupabaseProjectRefFromUrl()
+    const jwtRef = getProjectRefFromJwt(readEnv('VITE_SUPABASE_ANON_KEY'))
+    const mismatch =
+      urlRef && jwtRef && urlRef !== jwtRef
+        ? ` Env mismatch: URL is "${urlRef}" but anon key is for "${jwtRef}".`
+        : isSupabaseProxyEnabled()
+          ? ` Deployed builds often fail when Vercel still has the old project (fatvwpnqoexvdneevgof) while the proxy targets ${SUPABASE_PROJECT_REF}.`
+          : ''
+
     return [
-      'Invalid Supabase API key for this project.',
-      'Open Supabase Dashboard → Settings → API and copy Project URL + anon (public) key from the same project.',
-      'Local: update .env, then restart npm run dev. Vercel: update env vars and redeploy.',
-      'Remove stale keys or typos in VITE_SUPABASE_PUBLISHABLE_KEY / VITE_SUPABASE_ANON_KEY.',
+      `Invalid Supabase API key for project ${SUPABASE_PROJECT_REF}.${mismatch}`,
+      `Set VITE_SUPABASE_URL=https://${SUPABASE_PROJECT_REF}.supabase.co`,
+      'Set VITE_SUPABASE_ANON_KEY to the anon (public) key from that same project.',
+      'Local: save .env → restart npm run dev. Vercel: Project Settings → Environment Variables → Redeploy.',
+      'Then hard refresh (Ctrl+Shift+R) or clear site data.',
     ].join(' ')
   }
 
@@ -174,6 +200,25 @@ export function formatSupabaseNetworkError(message: string): string {
     'verify VITE_SUPABASE_URL in .env, then restart npm run dev.',
     'If DevTools shows ERR_QUIC_PROTOCOL_ERROR, disable QUIC in Chrome (chrome://flags) or use another browser.',
   ].join(' ')
+}
+
+/** Wipe every Supabase auth token (use after invalid API key / project switch). */
+export function clearAllSupabaseAuthStorage(): void {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return
+  }
+
+  const keysToRemove: string[] = []
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index)
+    if (key && /^sb-.*-auth-token(?:\.\d+)?$/.test(key)) {
+      keysToRemove.push(key)
+    }
+  }
+
+  for (const key of keysToRemove) {
+    window.localStorage.removeItem(key)
+  }
 }
 
 /** Remove cached auth tokens (stops refresh loops against wrong/deleted projects). */

@@ -17,8 +17,10 @@ import {
 } from '../lib/permissions'
 import { supabase } from '../lib/supabase'
 import {
+  clearAllSupabaseAuthStorage,
   clearSupabaseAuthStorage,
   formatSupabaseNetworkError,
+  isSupabaseApiKeyError,
   isSupabaseNameResolutionError,
 } from '../lib/supabaseEnv'
 import { fetchUserProfile } from '../lib/userProfile'
@@ -100,8 +102,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(async ({ data, error }) => {
         if (!mounted) return
         if (error) {
-          if (isSupabaseNameResolutionError(error.message)) {
-            clearSupabaseAuthStorage()
+          if (isSupabaseNameResolutionError(error.message) || isSupabaseApiKeyError(error.message)) {
+            clearAllSupabaseAuthStorage()
             await supabase.auth.signOut({ scope: 'local' })
           }
           console.warn('Supabase session check failed:', formatSupabaseNetworkError(error.message))
@@ -123,8 +125,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(async (error: unknown) => {
         if (!mounted) return
         const message = error instanceof Error ? error.message : 'Failed to fetch'
-        if (isSupabaseNameResolutionError(message)) {
-          clearSupabaseAuthStorage()
+        if (isSupabaseNameResolutionError(message) || isSupabaseApiKeyError(message)) {
+          clearAllSupabaseAuthStorage()
           await supabase.auth.signOut({ scope: 'local' })
         }
         console.warn('Supabase session check failed:', formatSupabaseNetworkError(message))
@@ -180,6 +182,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (error) {
+      if (isSupabaseApiKeyError(error.message)) {
+        clearAllSupabaseAuthStorage()
+        await supabase.auth.signOut({ scope: 'local' })
+      }
       throw new Error(formatSupabaseNetworkError(error.message))
     }
 
