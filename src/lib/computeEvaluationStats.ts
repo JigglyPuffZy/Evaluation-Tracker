@@ -1,7 +1,9 @@
 import {
   EVALUATION_SECTIONS,
   RATING_BANDS,
+  RATING_FIELD_LABELS,
   RATING_SCALE_MAX,
+  type RatingFieldKey,
   type SectionId,
 } from '../types/evaluation'
 import type { EvaluationRow } from '../types/evaluation'
@@ -29,12 +31,22 @@ export type TrainingStat = {
   percentOfScale: number
 }
 
+export type StatementStat = {
+  key: RatingFieldKey
+  label: string
+  sectionId: SectionId
+  sectionTitle: string
+  average: number
+  percent: number
+}
+
 export type EvaluationStats = {
   totalResponses: number
   overallAverage: number
   overallPercent: number
   positivePercent: number
   sections: SectionStat[]
+  statements: StatementStat[]
   ratingDistribution: RatingDistribution[]
   trainings: TrainingStat[]
 }
@@ -69,6 +81,16 @@ export function computeEvaluationStats(rows: EvaluationRow[]): EvaluationStats {
         average: 0,
         percent: 0,
       })),
+      statements: EVALUATION_SECTIONS.flatMap((section) =>
+        section.fields.map((key) => ({
+          key,
+          label: RATING_FIELD_LABELS[key],
+          sectionId: section.id,
+          sectionTitle: section.title,
+          average: 0,
+          percent: 0,
+        })),
+      ),
       ratingDistribution: RATING_BANDS.map((band) => ({
         score: band.score,
         label: band.label,
@@ -98,6 +120,21 @@ export function computeEvaluationStats(rows: EvaluationRow[]): EvaluationStats {
       percent: round0((avg / RATING_SCALE_MAX) * 100),
     }
   })
+
+  const statements: StatementStat[] = EVALUATION_SECTIONS.flatMap((section) =>
+    section.fields.map((key) => {
+      const values = rows.map((row) => row[key])
+      const avg = round1(average(values))
+      return {
+        key,
+        label: RATING_FIELD_LABELS[key],
+        sectionId: section.id,
+        sectionTitle: section.title,
+        average: avg,
+        percent: round0((avg / RATING_SCALE_MAX) * 100),
+      }
+    }),
+  )
 
   const ratingDistribution: RatingDistribution[] = RATING_BANDS.map((band) => {
     const count = rows.filter((row) => Math.round(getRowOverallAverage(row)) === band.score).length
@@ -130,6 +167,7 @@ export function computeEvaluationStats(rows: EvaluationRow[]): EvaluationStats {
     overallPercent,
     positivePercent,
     sections,
+    statements,
     ratingDistribution,
     trainings,
   }

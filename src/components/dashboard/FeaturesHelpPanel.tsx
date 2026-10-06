@@ -19,7 +19,7 @@ const features = [
   },
   {
     title: 'PDF-style reports',
-    body: 'On any training page, export a printable report with scores, sections, and Part VI comments.',
+    body: 'On any training page, download a PDF report with per-statement scores, sections, and Part VI comments.',
   },
   {
     title: 'Role-based access',

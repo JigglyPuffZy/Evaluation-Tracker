@@ -1,153 +1,238 @@
 import type { EvaluationStats } from './computeEvaluationStats'
 import type { TrainingSummary } from './buildTrainingSummaries'
 import type { EvaluationRow } from '../types/evaluation'
-import { PART_VI_SECTION, RATING_SCALE_MAX } from '../types/evaluation'
+import { EVALUATION_SECTIONS, PART_VI_SECTION, RATING_SCALE_MAX } from '../types/evaluation'
 
 const BENCHMARK_SCORE = 3.5
+const PAGE_MARGIN = 14
+const FOOTER_Y = 285
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+function safeFileName(value: string): string {
+  return value.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-').slice(0, 80) || 'training-report'
 }
 
-function formatComments(rows: EvaluationRow[]): string {
-  const blocks: string[] = []
+type PdfDoc = import('jspdf').jsPDF
 
-  for (const row of rows) {
-    const improvement = row.areas_for_improvement.trim()
-    const suggestion = row.future_suggestions.trim()
-
-    if (!improvement && !suggestion) {
-      continue
-    }
-
-    blocks.push(`
-      <div class="comment">
-        <p class="comment-meta">${escapeHtml(row.evaluator_name || 'Anonymous')} · ${escapeHtml(row.training_date)}</p>
-        ${improvement ? `<p><strong>Improve:</strong> ${escapeHtml(improvement)}</p>` : ''}
-        ${suggestion ? `<p><strong>Suggest:</strong> ${escapeHtml(suggestion)}</p>` : ''}
-      </div>
-    `)
+function ensurePage(doc: PdfDoc, y: number, needed = 20): number {
+  if (y + needed <= FOOTER_Y) {
+    return y
   }
 
-  if (blocks.length === 0) {
-    return '<p class="muted">No Part VI comments recorded.</p>'
-  }
-
-  return blocks.join('')
+  doc.addPage()
+  return PAGE_MARGIN + 8
 }
 
-export function openTrainingReportWindow(options: {
+function writeSectionHeading(doc: PdfDoc, title: string, y: number): number {
+  y = ensurePage(doc, y, 16)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  doc.setTextColor(0, 61, 130)
+  doc.text(title, PAGE_MARGIN, y)
+  doc.setDrawColor(198, 217, 239)
+  doc.line(PAGE_MARGIN, y + 2, 196, y + 2)
+  doc.setTextColor(10, 31, 61)
+  return y + 10
+}
+
+function writeBodyText(doc: PdfDoc, text: string, y: number, maxWidth = 182): number {
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  const lines = doc.splitTextToSize(text, maxWidth)
+  for (const line of lines) {
+    y = ensurePage(doc, y, 6)
+    doc.text(line, PAGE_MARGIN, y)
+    y += 5
+  }
+  return y + 2
+}
+
+async function createPdfDocument(): Promise<{
+  doc: PdfDoc
+  autoTable: typeof import('jspdf-autotable').default
+}> {
+  const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ])
+
+  return { doc: new jsPDF({ unit: 'mm', format: 'a4' }), autoTable }
+}
+
+function addPageNumbers(doc: PdfDoc): void {
+  const pageCount = doc.getNumberOfPages()
+  for (let page = 1; page <= pageCount; page += 1) {
+    doc.setPage(page)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.setTextColor(90, 111, 140)
+    doc.text(
+      `Evaluation Tracker · DOST RO2 · Page ${page} of ${pageCount}`,
+      PAGE_MARGIN,
+      292,
+    )
+  }
+}
+
+function buildTrainingReportPdf(options: {
   training: TrainingSummary
   stats: EvaluationStats
   rows: EvaluationRow[]
-}) {
+}): Promise<PdfDoc> {
   const { training, stats, rows } = options
-  const generatedAt = new Date().toLocaleString()
-  const meetsBenchmark = stats.overallAverage >= BENCHMARK_SCORE
 
-  const sectionRows = stats.sections
-    .map(
-      (section) => `
-        <tr>
-          <td>${escapeHtml(section.label)}</td>
-          <td class="num">${section.average.toFixed(2)}</td>
-          <td class="num">${section.percent}%</td>
-        </tr>
-      `,
+  return createPdfDocument().then(({ doc, autoTable }) => {
+    const generatedAt = new Date().toLocaleString()
+    const meetsBenchmark = stats.overallAverage >= BENCHMARK_SCORE
+    let y = PAGE_MARGIN
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(16)
+    doc.setTextColor(10, 31, 61)
+    const titleLines = doc.splitTextToSize(training.trainingTitle, 182)
+    doc.text(titleLines, PAGE_MARGIN, y)
+    y += titleLines.length * 7 + 2
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(90, 111, 140)
+    doc.text(`DOST RO2 Training Evaluation Report · Generated ${generatedAt}`, PAGE_MARGIN, y)
+    y += 10
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.setTextColor(10, 31, 61)
+    doc.text(`Overall score: ${stats.overallAverage.toFixed(2)} / ${RATING_SCALE_MAX}.0`, PAGE_MARGIN, y)
+    doc.text(`Responses: ${stats.totalResponses}`, 80, y)
+    doc.text(`Agree / Excellent: ${stats.positivePercent}%`, 120, y)
+    doc.text(`Sessions: ${training.dates.length}`, 170, y)
+    y += 8
+
+    doc.setFontSize(9)
+    doc.setTextColor(meetsBenchmark ? 4 : 180, meetsBenchmark ? 120 : 83, meetsBenchmark ? 87 : 9)
+    doc.text(
+      `Regional benchmark ${BENCHMARK_SCORE.toFixed(1)} — ${meetsBenchmark ? 'Meets target' : 'Below target'}`,
+      PAGE_MARGIN,
+      y,
     )
-    .join('')
+    doc.setTextColor(10, 31, 61)
+    y += 10
 
-  const distributionRows = stats.ratingDistribution
-    .map(
-      (item) => `
-        <tr>
-          <td>Score ${item.score}</td>
-          <td class="num">${item.count}</td>
-          <td class="num">${item.percent}%</td>
-        </tr>
-      `,
+    y = writeSectionHeading(doc, 'Per-statement scores (Parts I–V)', y)
+    y = writeBodyText(
+      doc,
+      'Each evaluation statement with average score across all responses.',
+      y,
     )
-    .join('')
 
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>${escapeHtml(training.trainingTitle)} — Evaluation Report</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: "Segoe UI", system-ui, sans-serif; color: #0a1f3d; margin: 0; padding: 32px; line-height: 1.5; }
-    h1 { margin: 0 0 8px; font-size: 1.75rem; }
-    h2 { margin: 28px 0 12px; font-size: 1.1rem; color: #003d82; border-bottom: 2px solid #d6e8f7; padding-bottom: 6px; }
-    .meta { color: #5a6f8c; font-size: 0.9rem; margin-bottom: 24px; }
-    .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
-    .card { border: 1px solid #c8d9ef; border-radius: 12px; padding: 14px; background: #f7faff; }
-    .card strong { display: block; font-size: 1.4rem; margin-top: 4px; }
-    .card span { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: #5a6f8c; }
-    .benchmark { display: inline-block; margin-top: 8px; padding: 6px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; }
-    .benchmark.pass { background: #d1fae5; color: #047857; }
-    .benchmark.fail { background: #fef3c7; color: #b45309; }
-    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.92rem; }
-    th, td { border: 1px solid #c8d9ef; padding: 8px 10px; text-align: left; }
-    th { background: #eef4fc; }
-    .num { text-align: right; font-variant-numeric: tabular-nums; }
-    .comment { border: 1px solid #c8d9ef; border-radius: 10px; padding: 12px; margin-bottom: 10px; background: #fff; }
-    .comment-meta { margin: 0 0 6px; font-size: 0.8rem; color: #5a6f8c; }
-    .muted { color: #5a6f8c; }
-    footer { margin-top: 32px; font-size: 0.8rem; color: #5a6f8c; }
-    @media print {
-      body { padding: 16px; }
-      .no-print { display: none; }
+    for (const section of EVALUATION_SECTIONS) {
+      const statementRows = stats.statements
+        .filter((statement) => statement.sectionId === section.id)
+        .map((statement, index) => [
+          String(index + 1),
+          statement.label,
+          statement.average.toFixed(2),
+          `${statement.percent}%`,
+        ])
+
+      y = ensurePage(doc, y, 24)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.text(section.title, PAGE_MARGIN, y)
+      y += 4
+
+      autoTable(doc, {
+        startY: y,
+        head: [['#', 'Statement', 'Average', '% of scale']],
+        body: statementRows,
+        margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
+        styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak', valign: 'top' },
+        headStyles: { fillColor: [238, 244, 252], textColor: [10, 31, 61], fontStyle: 'bold' },
+        columnStyles: {
+          0: { cellWidth: 8, halign: 'right' },
+          1: { cellWidth: 130 },
+          2: { cellWidth: 18, halign: 'right' },
+          3: { cellWidth: 18, halign: 'right' },
+        },
+      })
+
+      y = (doc as PdfDoc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8
     }
-  </style>
-</head>
-<body>
-  <p class="no-print muted">Use your browser print dialog and choose “Save as PDF”.</p>
-  <h1>${escapeHtml(training.trainingTitle)}</h1>
-  <p class="meta">DOST RO2 Training Evaluation Report · Generated ${escapeHtml(generatedAt)}</p>
 
-  <div class="cards">
-    <div class="card"><span>Overall score</span><strong>${stats.overallAverage.toFixed(2)}</strong></div>
-    <div class="card"><span>Responses</span><strong>${stats.totalResponses}</strong></div>
-    <div class="card"><span>Agree / Excellent</span><strong>${stats.positivePercent}%</strong></div>
-    <div class="card"><span>Sessions</span><strong>${training.dates.length}</strong></div>
-  </div>
+    y = writeSectionHeading(doc, 'Section summary', y)
+    autoTable(doc, {
+      startY: y,
+      head: [['Section', 'Average', '% of scale']],
+      body: stats.sections.map((section) => [
+        section.label,
+        section.average.toFixed(2),
+        `${section.percent}%`,
+      ]),
+      margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
+      styles: { fontSize: 9, cellPadding: 2.5 },
+      headStyles: { fillColor: [238, 244, 252], textColor: [10, 31, 61], fontStyle: 'bold' },
+      columnStyles: {
+        1: { halign: 'right' },
+        2: { halign: 'right' },
+      },
+    })
 
-  <p class="benchmark ${meetsBenchmark ? 'pass' : 'fail'}">
-    Regional benchmark: ${BENCHMARK_SCORE.toFixed(1)} / ${RATING_SCALE_MAX}.0 —
-    ${meetsBenchmark ? 'Meets target' : 'Below target'}
-  </p>
+    y = (doc as PdfDoc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10
+    y = writeSectionHeading(doc, 'Rating distribution', y)
+    autoTable(doc, {
+      startY: y,
+      head: [['Score', 'Count', 'Share']],
+      body: stats.ratingDistribution.map((item) => [
+        String(item.score),
+        String(item.count),
+        `${item.percent}%`,
+      ]),
+      margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
+      styles: { fontSize: 9, cellPadding: 2.5 },
+      headStyles: { fillColor: [238, 244, 252], textColor: [10, 31, 61], fontStyle: 'bold' },
+      columnStyles: {
+        1: { halign: 'right' },
+        2: { halign: 'right' },
+      },
+    })
 
-  <h2>Parts I–V section scores</h2>
-  <table>
-    <thead><tr><th>Section</th><th>Average</th><th>% of scale</th></tr></thead>
-    <tbody>${sectionRows}</tbody>
-  </table>
+    y = (doc as PdfDoc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10
+    y = writeSectionHeading(doc, PART_VI_SECTION.title, y)
 
-  <h2>Rating distribution</h2>
-  <table>
-    <thead><tr><th>Score</th><th>Count</th><th>Share</th></tr></thead>
-    <tbody>${distributionRows}</tbody>
-  </table>
+    const comments = rows.filter(
+      (row) => row.areas_for_improvement.trim() || row.future_suggestions.trim(),
+    )
 
-  <h2>${escapeHtml(PART_VI_SECTION.title)}</h2>
-  ${formatComments(rows)}
+    if (comments.length === 0) {
+      y = writeBodyText(doc, 'No Part VI comments recorded.', y)
+    } else {
+      for (const row of comments) {
+        y = ensurePage(doc, y, 18)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(9)
+        doc.text(`${row.evaluator_name || 'Anonymous'} · ${row.training_date}`, PAGE_MARGIN, y)
+        y += 5
 
-  <footer>Evaluation Tracker · DOST Regional Office No. 02</footer>
-  <script>window.onload = () => window.print()</script>
-</body>
-</html>`
+        if (row.areas_for_improvement.trim()) {
+          y = writeBodyText(doc, `Improve: ${row.areas_for_improvement.trim()}`, y)
+        }
+        if (row.future_suggestions.trim()) {
+          y = writeBodyText(doc, `Suggest: ${row.future_suggestions.trim()}`, y)
+        }
+        y += 4
+      }
+    }
 
-  const popup = window.open('', '_blank', 'noopener,noreferrer,width=960,height=720')
-  if (!popup) {
-    throw new Error('Pop-up blocked. Allow pop-ups to download the report.')
-  }
+    addPageNumbers(doc)
+    return doc
+  })
+}
 
-  popup.document.open()
-  popup.document.write(html)
-  popup.document.close()
+export async function downloadTrainingReportPdf(options: {
+  training: TrainingSummary
+  stats: EvaluationStats
+  rows: EvaluationRow[]
+}): Promise<void> {
+  const { training } = options
+  const doc = await buildTrainingReportPdf(options)
+  doc.save(`${safeFileName(training.trainingTitle)}-evaluation-report.pdf`)
 }

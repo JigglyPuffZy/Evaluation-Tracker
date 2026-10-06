@@ -11,7 +11,7 @@ import { Section } from '../components/ui/Section'
 import { useEvaluationData } from '../context/EvaluationDataContext'
 import { computeEvaluationStats } from '../lib/computeEvaluationStats'
 import { buildTrainingSummariesByTitle, filterRowsByTrainingTitle } from '../lib/buildTrainingSummaries'
-import { openTrainingReportWindow } from '../lib/exportTrainingReport'
+import { downloadTrainingReportPdf } from '../lib/exportTrainingReport'
 import { getRowOverallAverage } from '../lib/evaluationRow'
 import { Button } from '../components/ui/Button'
 import { PartVIComments } from '../components/evaluation/PartVIComments'
@@ -89,6 +89,7 @@ export function ProgramDetailPage() {
   const { programId } = useParams<{ programId: string }>()
   const { rows, sourceLabel, hasUploads } = useEvaluationData()
   const [reportError, setReportError] = useState('')
+  const [exportingReport, setExportingReport] = useState(false)
 
   let trainingTitle = ''
   if (programId) {
@@ -114,20 +115,23 @@ export function ProgramDetailPage() {
   const primaryDate = dateStats[0]
   const meetsBenchmark = stats.overallAverage >= BENCHMARK_SCORE
 
-  function handleExportReport() {
-    if (!trainingSummary) {
+  async function handleExportReport() {
+    if (!trainingSummary || exportingReport) {
       return
     }
 
     setReportError('')
+    setExportingReport(true)
     try {
-      openTrainingReportWindow({
+      await downloadTrainingReportPdf({
         training: trainingSummary,
         stats,
         rows: trainingRows,
       })
     } catch (error) {
-      setReportError(error instanceof Error ? error.message : 'Could not open report.')
+      setReportError(error instanceof Error ? error.message : 'Could not download report.')
+    } finally {
+      setExportingReport(false)
     }
   }
 
@@ -260,8 +264,13 @@ export function ProgramDetailPage() {
                     max={RATING_SCALE_MAX}
                     size={128}
                   />
-                  <Button variant="secondary" size="sm" onClick={handleExportReport}>
-                    Export report (PDF)
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleExportReport}
+                    disabled={exportingReport}
+                  >
+                    {exportingReport ? 'Preparing PDF…' : 'Export report (PDF)'}
                   </Button>
                 </div>
               </div>
