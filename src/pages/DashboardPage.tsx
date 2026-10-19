@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { DashboardCsfTile } from '../components/dashboard/DashboardCsfTile'
 import { DashboardFilters, type DashboardFilter } from '../components/dashboard/DashboardFilters'
 import { DashboardHero } from '../components/dashboard/DashboardHero'
 import { DashboardTrainingTile } from '../components/dashboard/DashboardTrainingTile'
@@ -9,6 +11,8 @@ import { SectionHeading } from '../components/ui/PageHeader'
 import { useAuth } from '../context/AuthContext'
 import { useEvaluationData } from '../context/EvaluationDataContext'
 import { buildTrainingSummariesByTitle } from '../lib/buildTrainingSummaries'
+import { fetchDashboardCsfSummaries } from '../lib/feedbackFormDb'
+import type { DashboardCsfFormSummary } from '../types/feedbackForm'
 
 function matchesScoreFilter(average: number, filter: DashboardFilter): boolean {
   if (filter === 'strong') {
@@ -25,6 +29,24 @@ export function DashboardPage() {
   const { rows, stats, sourceLabel, hasUploads, isLoading, loadError } = useEvaluationData()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<DashboardFilter>('all')
+  const [csfForms, setCsfForms] = useState<DashboardCsfFormSummary[]>([])
+  const [csfLoading, setCsfLoading] = useState(true)
+
+  const loadDashboardCsf = useCallback(async () => {
+    setCsfLoading(true)
+    try {
+      const data = await fetchDashboardCsfSummaries()
+      setCsfForms(data)
+    } catch {
+      setCsfForms([])
+    } finally {
+      setCsfLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadDashboardCsf()
+  }, [loadDashboardCsf])
 
   const uploadedTrainings = useMemo(() => buildTrainingSummariesByTitle(rows), [rows])
 
@@ -73,6 +95,25 @@ export function DashboardPage() {
           {loadError}. Run <code className="text-xs">supabase/setup.sql</code> in Supabase SQL
           Editor, then refresh.
         </p>
+      ) : null}
+
+      {!csfLoading && csfForms.length > 0 ? (
+        <section aria-labelledby="csf-heading" className="space-y-4">
+          <SectionHeading
+            title="CSF on dashboard"
+            description="Online customer satisfaction forms na pinili mong ipakita dito (mula sa Forms page)."
+            action={
+              <Link to="/forms" className="meta-pill hover:text-accent">
+                Manage forms
+              </Link>
+            }
+          />
+          <div className="dash-bento-grid">
+            {csfForms.map((form, index) => (
+              <DashboardCsfTile key={form.id} form={form} index={index} />
+            ))}
+          </div>
+        </section>
       ) : null}
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,340px)] xl:gap-8">

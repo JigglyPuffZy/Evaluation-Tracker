@@ -5,6 +5,7 @@ import { BrandLogo } from '../ui/BrandLogo'
 
 const navItems = [
   { to: '/', label: 'Dashboard', end: true, icon: DashboardIcon },
+  { to: '/forms', label: 'Forms', end: false, icon: FormsIcon },
   { to: '/programs', label: 'Trainings', end: false, icon: TrainingsIcon },
 ] as const
 
@@ -15,6 +16,19 @@ function DashboardIcon() {
       <rect x="11" y="2.5" width="6.5" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
       <rect x="2.5" y="11" width="6.5" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
       <rect x="11" y="11" width="6.5" height="6.5" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  )
+}
+
+function FormsIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="M5 4.5h10a1.5 1.5 0 0 1 1.5 1.5v10a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 16V6A1.5 1.5 0 0 1 5 4.5Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <path d="M7 8h6M7 11h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   )
 }

@@ -2,6 +2,10 @@ import { useState } from 'react'
 
 const features = [
   {
+    title: 'Online evaluation forms',
+    body: 'Create a shareable CSF link under Forms — no Google Forms needed. Responses appear in the dashboard like Excel imports.',
+  },
+  {
     title: 'Smart import & merge',
     body: 'Upload Google Form Excel files. Duplicates can be merged (update existing rows), skipped, or imported as new.',
   },
