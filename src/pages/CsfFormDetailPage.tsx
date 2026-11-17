@@ -1,13 +1,26 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { PageHeader } from '../components/ui/PageHeader'
+import { CsfBreakdownPanel } from '../components/feedback/CsfBreakdownPanel'
+import {
+  Icons,
+  KpiCard,
+  MeterBar,
+  StatusPill,
+  formatDate,
+  formatScore,
+  toneFor,
+  toneSoft,
+  toneText,
+} from '../components/feedback/csfUi'
+import { PageHeader, SectionHeading } from '../components/ui/PageHeader'
 import { Section } from '../components/ui/Section'
-import { CSF_SQD_STATEMENTS } from '../types/csfForm'
 import { computeCsfFormStats, type CsfFormStats } from '../lib/computeCsfFormStats'
 import { fetchCsfResponsesRaw, fetchFeedbackForms } from '../lib/feedbackFormDb'
+import { CSF_SQD_STATEMENTS } from '../types/csfForm'
 import type { FeedbackFormRecord } from '../types/feedbackForm'
-import { PercentageBar } from '../components/charts/PercentageBar'
-import { CsfBreakdownPanel } from '../components/feedback/CsfBreakdownPanel'
+
+const buttonClass =
+  'inline-flex h-9 items-center rounded-lg border border-line bg-card px-3 text-xs font-semibold text-ink transition hover:border-accent/40'
 
 export function CsfFormDetailPage() {
   const { formId } = useParams<{ formId: string }>()
@@ -77,81 +90,112 @@ export function CsfFormDetailPage() {
     )
   }
 
+  const meta = [formatDate(form.trainingDate), form.venue].filter(Boolean).join(' · ')
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 pb-12">
       <PageHeader
         eyebrow="Customer satisfaction"
         title={form.trainingTitle}
-        description={`${stats.responseCount} response${stats.responseCount === 1 ? '' : 's'} from the online CSF link.`}
+        description={`${stats.responseCount} response${stats.responseCount === 1 ? '' : 's'}${meta ? ` · ${meta}` : ''}`}
         action={
-          <div className="flex flex-wrap gap-2">
-            <Link
-              to="/csf"
-              className="inline-flex h-9 items-center rounded-lg border border-line bg-card px-3 text-xs font-semibold text-ink"
-            >
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill live={form.isPublished} />
+            <Link to="/csf" className={buttonClass}>
               All CSF results
             </Link>
-            <Link
-              to="/forms"
-              className="inline-flex h-9 items-center rounded-lg border border-line bg-card px-3 text-xs font-semibold text-ink"
-            >
+            <Link to="/forms" className={buttonClass}>
               Manage forms
             </Link>
           </div>
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-line/70 bg-surface/40 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Responses</p>
-          <p className="mt-1 text-2xl font-bold text-ink">{stats.responseCount}</p>
-        </div>
-        <div className="rounded-xl border border-line/70 bg-surface/40 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Avg. SQD</p>
-          <p className="mt-1 text-2xl font-bold text-ink">
-            {stats.avgSqd != null ? `${stats.avgSqd.toFixed(2)} / 5` : '—'}
-          </p>
-        </div>
-        <div className="rounded-xl border border-line/70 bg-surface/40 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Avg. NPS score</p>
-          <p className="mt-1 text-2xl font-bold text-ink">
-            {stats.avgNps != null ? `${stats.avgNps.toFixed(1)} / 10` : '—'}
-          </p>
-        </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
+          label="Responses"
+          value={String(stats.responseCount)}
+          caption="Completed CSF forms"
+          icon={Icons.users}
+        />
+        <KpiCard
+          label="Service quality (SQD)"
+          value={formatScore(stats.avgSqd)}
+          unit="/ 5"
+          ratio={stats.avgSqd != null ? stats.avgSqd / 5 : null}
+          tone={toneFor(stats.avgSqd)}
+          caption="Average across all SQD statements"
+          icon={Icons.star}
+        />
+        <KpiCard
+          label="Overall satisfaction"
+          value={formatScore(stats.avgOverall)}
+          unit="/ 5"
+          ratio={stats.avgOverall != null ? stats.avgOverall / 5 : null}
+          tone={toneFor(stats.avgOverall)}
+          caption="Average overall rating"
+          icon={Icons.smile}
+        />
+        <KpiCard
+          label="Likely to recommend"
+          value={formatScore(stats.avgNps, 1)}
+          unit="/ 10"
+          ratio={stats.avgNps != null ? stats.avgNps / 10 : null}
+          tone={toneFor(stats.avgNps, 10)}
+          caption="Average recommendation score"
+          icon={Icons.thumb}
+        />
       </div>
 
       {stats.responseCount > 0 ? (
-        <Section title="Respondent breakdown" description="Who answered and how they rated overall.">
+        <section aria-label="Respondent breakdown" className="space-y-4">
+          <SectionHeading
+            title="Respondent breakdown"
+            description="Who answered, and how they rated their experience."
+          />
           <CsfBreakdownPanel breakdowns={stats.breakdowns} responseCount={stats.responseCount} />
-        </Section>
+        </section>
       ) : null}
 
-      <Section title="SQD criteria" description="Average rating per statement (1–5, N/A excluded).">
+      <Section
+        title="Service quality dimensions"
+        description="Average rating per statement, 1 (strongly disagree) to 5 (strongly agree). N/A answers are excluded."
+      >
         {stats.responseCount === 0 ? (
-          <p className="text-sm text-muted">Walang sagot pa. I-share ang link sa Forms page.</p>
+          <p className="text-sm text-muted">
+            No responses yet. Share the form link from the Forms page to start collecting ratings.
+          </p>
         ) : (
-          <ul className="space-y-4">
+          <ul className="divide-y divide-line/60">
             {CSF_SQD_STATEMENTS.map((statement) => {
               const avg = stats.sqdByStatement[statement.id]
-              const percent = avg != null ? (avg / 5) * 100 : 0
+              const tone = toneFor(avg)
               return (
-                <li key={statement.id}>
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <p className="text-sm font-medium text-ink">
-                      <span className="text-accent-deep">{statement.id.toUpperCase()}</span>{' '}
-                      {statement.label}
-                    </p>
-                    <p className="text-xs font-semibold text-muted">
-                      {avg != null ? `${avg.toFixed(2)} / 5` : 'No data'}
-                    </p>
+                <li
+                  key={statement.id}
+                  className="grid gap-x-4 gap-y-2 py-3.5 first:pt-0 last:pb-0 sm:grid-cols-[3.5rem_minmax(0,1fr)_5rem] sm:items-center"
+                >
+                  <span
+                    className={[
+                      'inline-flex h-7 w-fit items-center justify-center rounded-md px-2 text-[11px] font-bold tracking-wide',
+                      toneSoft(tone),
+                    ].join(' ')}
+                  >
+                    {statement.id.toUpperCase()}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm leading-snug text-ink">{statement.label}</p>
+                    <MeterBar ratio={avg != null ? avg / 5 : null} tone={tone} className="mt-2" />
                   </div>
-                  {avg != null ? (
-                    <PercentageBar
-                      label=""
-                      percent={Math.round(percent)}
-                      detail={`${avg.toFixed(2)} / 5`}
-                    />
-                  ) : null}
+                  <p
+                    className={[
+                      'text-sm font-bold tabular-nums sm:text-right',
+                      toneText(tone),
+                    ].join(' ')}
+                  >
+                    {avg != null ? avg.toFixed(2) : 'No data'}
+                    {avg != null ? <span className="ml-0.5 text-xs font-medium text-muted">/5</span> : null}
+                  </p>
                 </li>
               )
             })}

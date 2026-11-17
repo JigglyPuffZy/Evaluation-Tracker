@@ -7,7 +7,7 @@ const navItems = [
   { to: '/', label: 'Dashboard', end: true, icon: DashboardIcon },
   { to: '/forms', label: 'Forms', end: false, icon: FormsIcon },
   { to: '/programs', label: 'Trainings', end: false, icon: TrainingsIcon },
-  { to: '/csf', label: 'Customer Satisfaction', end: false, icon: SatisfactionIcon },
+  { to: '/csf', label: 'Satisfaction', end: false, icon: SatisfactionIcon },
 ] as const
 
 function SatisfactionIcon() {

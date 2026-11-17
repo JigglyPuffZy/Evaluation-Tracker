@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { DashboardCsfTile } from '../components/dashboard/DashboardCsfTile'
+import { CsfFormCard } from '../components/feedback/CsfFormCard'
+import { Icons, KpiCard, formatScore, toneFor } from '../components/feedback/csfUi'
 import { CsfBreakdownPanel } from '../components/feedback/CsfBreakdownPanel'
 import { PageHeader, SectionHeading } from '../components/ui/PageHeader'
 import { fetchCsfFormSummaries } from '../lib/feedbackFormDb'
@@ -37,15 +38,6 @@ function mergeCounts(lists: CsfCount[][]): CsfCount[] {
 
 function mergeBuckets(lists: number[][], length: number): number[] {
   return Array.from({ length }, (_, index) => lists.reduce((sum, list) => sum + (list[index] ?? 0), 0))
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-line/70 bg-surface/40 p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-ink">{value}</p>
-    </div>
-  )
 }
 
 export function CustomerSatisfactionPage() {
@@ -103,7 +95,7 @@ export function CustomerSatisfactionPage() {
   }, [forms])
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-8 pb-12">
       <PageHeader
         eyebrow="Customer satisfaction"
         title="Customer Satisfaction Feedback"
@@ -143,19 +135,40 @@ export function CustomerSatisfactionPage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Total responses" value={String(totals.responseCount)} />
-            <StatCard
-              label="Avg. SQD rating"
-              value={totals.avgSqd != null ? `${totals.avgSqd.toFixed(2)} / 5` : '—'}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard
+              label="Total responses"
+              value={String(totals.responseCount)}
+              caption={`Across ${forms.length} form${forms.length === 1 ? '' : 's'}`}
+              tone="accent"
+              icon={Icons.users}
             />
-            <StatCard
-              label="Avg. overall satisfaction"
-              value={totals.avgOverall != null ? `${totals.avgOverall.toFixed(2)} / 5` : '—'}
+            <KpiCard
+              label="Service quality (SQD)"
+              value={formatScore(totals.avgSqd)}
+              unit="/ 5"
+              ratio={totals.avgSqd != null ? totals.avgSqd / 5 : null}
+              tone={toneFor(totals.avgSqd)}
+              caption="Average across all SQD statements"
+              icon={Icons.star}
             />
-            <StatCard
-              label="Avg. recommendation"
-              value={totals.avgNps != null ? `${totals.avgNps.toFixed(1)} / 10` : '—'}
+            <KpiCard
+              label="Overall satisfaction"
+              value={formatScore(totals.avgOverall)}
+              unit="/ 5"
+              ratio={totals.avgOverall != null ? totals.avgOverall / 5 : null}
+              tone={toneFor(totals.avgOverall)}
+              caption="Average overall rating given by clients"
+              icon={Icons.smile}
+            />
+            <KpiCard
+              label="Likely to recommend"
+              value={formatScore(totals.avgNps, 1)}
+              unit="/ 10"
+              ratio={totals.avgNps != null ? totals.avgNps / 10 : null}
+              tone={toneFor(totals.avgNps, 10)}
+              caption="Average recommendation score"
+              icon={Icons.thumb}
             />
           </div>
 
@@ -165,9 +178,9 @@ export function CustomerSatisfactionPage() {
               description="One card per customer satisfaction form. Open a card for the full breakdown."
               action={<span className="meta-pill">{forms.length} form{forms.length === 1 ? '' : 's'}</span>}
             />
-            <div className="dash-bento-grid">
-              {forms.map((form, index) => (
-                <DashboardCsfTile key={form.id} form={form} index={index} />
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {forms.map((form) => (
+                <CsfFormCard key={form.id} form={form} />
               ))}
             </div>
           </section>
