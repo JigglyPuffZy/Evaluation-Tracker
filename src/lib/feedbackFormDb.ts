@@ -143,12 +143,12 @@ export async function fetchCsfResponsesRaw(formId: string): Promise<unknown[]> {
   return (data ?? []).map((row) => (row as { response: unknown }).response)
 }
 
-export async function fetchDashboardCsfSummaries(): Promise<DashboardCsfFormSummary[]> {
+/** Every CSF form with its computed stats — powers the Customer Satisfaction page. */
+export async function fetchCsfFormSummaries(): Promise<DashboardCsfFormSummary[]> {
   const { data, error } = await supabase
     .from('feedback_forms')
     .select('*')
     .eq('form_type', 'csf')
-    .eq('show_on_dashboard', true)
     .order('created_at', { ascending: false })
 
   if (error) {

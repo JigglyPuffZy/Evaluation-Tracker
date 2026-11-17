@@ -9,7 +9,6 @@ import {
   createFeedbackForm,
   fetchFeedbackForms,
   setFeedbackFormPublished,
-  setFeedbackFormShowOnDashboard,
 } from '../lib/feedbackFormDb'
 import { buildPublicFormUrl } from '../lib/generateFormSlug'
 import { canImportData } from '../lib/permissions'
@@ -106,23 +105,6 @@ export function FeedbackFormsPage() {
       window.setTimeout(() => setCopiedSlug(null), 2000)
     } catch {
       window.prompt('Copy this link:', url)
-    }
-  }
-
-  async function handleToggleDashboard(form: FeedbackFormRecord) {
-    setError('')
-    try {
-      const next = !form.showOnDashboard
-      await setFeedbackFormShowOnDashboard(form.id, next)
-      setForms((current) =>
-        current.map((item) => (item.id === form.id ? { ...item, showOnDashboard: next } : item)),
-      )
-    } catch (toggleError) {
-      setError(
-        toggleError instanceof Error
-          ? toggleError.message
-          : 'Could not update dashboard setting. Run feedback-forms-csf.sql in Supabase.',
-      )
     }
   }
 
@@ -269,7 +251,7 @@ export function FeedbackFormsPage() {
 
       <Section
         title="Mga ginawang form"
-        description="Listahan ng lahat ng links. Sa CSF, makikita kung ilan na ang sumagot. Piliin kung ipapakita sa Dashboard (admin/staff/trainer)."
+        description="Listahan ng lahat ng links. Ang CSF results ay nasa Customer Satisfaction page; ang training evaluations ay nasa Dashboard."
         action={
           <Button variant="secondary" size="sm" onClick={() => void handleRefreshData()}>
             Refresh
@@ -299,9 +281,6 @@ export function FeedbackFormsPage() {
                           ? `${form.responseCount} CSF na sagot`
                           : `${form.responseCount} training response${form.responseCount === 1 ? '' : 's'}`}
                       </p>
-                      {form.formType === 'csf' && form.showOnDashboard ? (
-                        <p className="mt-1 text-xs font-medium text-good">Naka-display sa Dashboard</p>
-                      ) : null}
                       <p className="mt-2 break-all font-mono text-xs text-accent-deep">
                         {buildPublicFormUrl(form.slug)}
                       </p>
@@ -338,13 +317,6 @@ export function FeedbackFormsPage() {
                     </Button>
                     {form.formType === 'csf' ? (
                       <>
-                        <Button
-                          variant={form.showOnDashboard ? 'primary' : 'secondary'}
-                          size="sm"
-                          onClick={() => void handleToggleDashboard(form)}
-                        >
-                          {form.showOnDashboard ? 'Alisin sa Dashboard' : 'Ipakita sa Dashboard'}
-                        </Button>
                         <Link
                           to={`/csf/${form.id}`}
                           className="inline-flex h-9 items-center rounded-lg bg-accent-soft px-3 text-xs font-semibold text-accent-deep transition hover:bg-accent hover:text-white"

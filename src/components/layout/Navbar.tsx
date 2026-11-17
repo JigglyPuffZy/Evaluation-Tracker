@@ -7,7 +7,19 @@ const navItems = [
   { to: '/', label: 'Dashboard', end: true, icon: DashboardIcon },
   { to: '/forms', label: 'Forms', end: false, icon: FormsIcon },
   { to: '/programs', label: 'Trainings', end: false, icon: TrainingsIcon },
+  { to: '/csf', label: 'Customer Satisfaction', end: false, icon: SatisfactionIcon },
 ] as const
+
+function SatisfactionIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <circle cx="10" cy="10" r="7.25" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M7 11.5c.8 1.1 1.7 1.6 3 1.6s2.2-.5 3-1.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="7.5" cy="8" r=".9" fill="currentColor" />
+      <circle cx="12.5" cy="8" r=".9" fill="currentColor" />
+    </svg>
+  )
+}
 
 function DashboardIcon() {
   return (

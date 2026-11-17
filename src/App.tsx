@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { ProgramDetailPage } from './pages/ProgramDetailPage'
 import { CsfFormDetailPage } from './pages/CsfFormDetailPage'
+import { CustomerSatisfactionPage } from './pages/CustomerSatisfactionPage'
 import { FeedbackFormsPage } from './pages/FeedbackFormsPage'
 import { PublicFeedbackPage } from './pages/PublicFeedbackPage'
 import { ProgramsPage } from './pages/ProgramsPage'
@@ -27,6 +28,7 @@ export default function App() {
                 <Route element={<AppShell />}>
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/forms" element={<FeedbackFormsPage />} />
+                  <Route path="/csf" element={<CustomerSatisfactionPage />} />
                   <Route path="/csf/:formId" element={<CsfFormDetailPage />} />
                   <Route path="/programs" element={<ProgramsPage />} />
                   <Route path="/programs/:programId" element={<ProgramDetailPage />} />

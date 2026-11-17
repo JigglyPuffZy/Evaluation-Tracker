@@ -3,7 +3,11 @@ import { useState } from 'react'
 const features = [
   {
     title: 'Online evaluation forms',
-    body: 'Create a shareable CSF link under Forms — no Google Forms needed. Responses appear in the dashboard like Excel imports.',
+    body: 'Create shareable training evaluation links under Forms — no Google Forms needed. Responses appear in the dashboard like Excel imports.',
+  },
+  {
+    title: 'Customer Satisfaction (CSF)',
+    body: 'CSF forms have their own page, separate from training evaluations, with SQD scores, recommendation and client breakdowns.',
   },
   {
     title: 'Smart import & merge',

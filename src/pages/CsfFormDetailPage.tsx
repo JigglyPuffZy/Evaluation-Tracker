@@ -7,6 +7,7 @@ import { computeCsfFormStats, type CsfFormStats } from '../lib/computeCsfFormSta
 import { fetchCsfResponsesRaw, fetchFeedbackForms } from '../lib/feedbackFormDb'
 import type { FeedbackFormRecord } from '../types/feedbackForm'
 import { PercentageBar } from '../components/charts/PercentageBar'
+import { CsfBreakdownPanel } from '../components/feedback/CsfBreakdownPanel'
 
 export function CsfFormDetailPage() {
   const { formId } = useParams<{ formId: string }>()
@@ -69,8 +70,8 @@ export function CsfFormDetailPage() {
         <p className="text-sm text-warn" role="alert">
           {error || 'Form not found.'}
         </p>
-        <Link to="/" className="mt-4 inline-block text-sm font-medium text-accent hover:underline">
-          Back to dashboard
+        <Link to="/csf" className="mt-4 inline-block text-sm font-medium text-accent hover:underline">
+          Back to Customer Satisfaction
         </Link>
       </Section>
     )
@@ -83,12 +84,20 @@ export function CsfFormDetailPage() {
         title={form.trainingTitle}
         description={`${stats.responseCount} response${stats.responseCount === 1 ? '' : 's'} from the online CSF link.`}
         action={
-          <Link
-            to="/forms"
-            className="inline-flex h-9 items-center rounded-lg border border-line bg-card px-3 text-xs font-semibold text-ink"
-          >
-            Manage forms
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to="/csf"
+              className="inline-flex h-9 items-center rounded-lg border border-line bg-card px-3 text-xs font-semibold text-ink"
+            >
+              All CSF results
+            </Link>
+            <Link
+              to="/forms"
+              className="inline-flex h-9 items-center rounded-lg border border-line bg-card px-3 text-xs font-semibold text-ink"
+            >
+              Manage forms
+            </Link>
+          </div>
         }
       />
 
@@ -110,6 +119,12 @@ export function CsfFormDetailPage() {
           </p>
         </div>
       </div>
+
+      {stats.responseCount > 0 ? (
+        <Section title="Respondent breakdown" description="Who answered and how they rated overall.">
+          <CsfBreakdownPanel breakdowns={stats.breakdowns} responseCount={stats.responseCount} />
+        </Section>
+      ) : null}
 
       <Section title="SQD criteria" description="Average rating per statement (1–5, N/A excluded).">
         {stats.responseCount === 0 ? (
