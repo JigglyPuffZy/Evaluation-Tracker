@@ -6,6 +6,7 @@ import {
   getSupabaseConfigError,
   getSupabaseDirectUrl,
   resolveSupabaseUrl,
+  SUPABASE_PROJECT_REF,
 } from './supabaseEnv'
 
 const configError = getSupabaseConfigError()
@@ -19,6 +20,9 @@ const supabaseKey = getSupabaseApiKey()
 function createSupabaseClient(): SupabaseClient {
   return createClient(resolveSupabaseUrl(), supabaseKey, {
   auth: {
+    // Pin the key to the project ref. Without this, proxy mode derives it from the page host
+    // (e.g. sb-localhost-auth-token), which clearSupabaseAuthStorage() deletes on every load.
+    storageKey: `sb-${SUPABASE_PROJECT_REF}-auth-token`,
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
