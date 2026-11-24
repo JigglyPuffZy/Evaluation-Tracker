@@ -1,6 +1,5 @@
 import { Badge } from '../ui/Badge'
-import { PART_VI_SECTION } from '../../types/evaluation'
-import type { EvaluationRow } from '../../types/evaluation'
+import { PART_VI_SECTION, type EvaluationRow } from '../../types/evaluation'
 
 type PartVICommentsProps = {
   rows: EvaluationRow[]

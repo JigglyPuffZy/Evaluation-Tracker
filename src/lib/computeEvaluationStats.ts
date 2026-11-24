@@ -3,10 +3,10 @@ import {
   RATING_BANDS,
   RATING_FIELD_LABELS,
   RATING_SCALE_MAX,
+  type EvaluationRow,
   type RatingFieldKey,
   type SectionId,
 } from '../types/evaluation'
-import type { EvaluationRow } from '../types/evaluation'
 import { getRowOverallAverage, isPositiveRow } from './evaluationRow'
 
 export type SectionStat = {

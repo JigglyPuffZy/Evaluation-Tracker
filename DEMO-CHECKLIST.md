@@ -97,9 +97,9 @@ Use this document when presenting the app to the DOST RO2 team.
 
 ---
 
-### 8. PDF-style report export
+### 8. PDF report export
 - Printable report with scores, sections, and comments
-- Opens in a new window — use browser Print → Save as PDF
+- Downloads a PDF file
 
 **Where:** Program detail page → **Export report**
 

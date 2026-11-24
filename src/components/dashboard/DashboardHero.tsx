@@ -67,7 +67,6 @@ export function DashboardHero({
       <div className="dash-hero-mesh pointer-events-none" aria-hidden="true" />
 
       <div className="relative p-6 sm:p-8 lg:p-10">
-        {/* Greeting row */}
         <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0 max-w-2xl">
             <div className="flex flex-wrap items-center gap-3">
@@ -128,7 +127,6 @@ export function DashboardHero({
           ) : null}
         </div>
 
-        {/* Unified stats bar */}
         <div className="dash-hero-stats mt-10">
           <DashboardHeroStat
             label="Programs"

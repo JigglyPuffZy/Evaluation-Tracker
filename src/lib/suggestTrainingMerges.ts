@@ -32,23 +32,6 @@ export function getDistinctTrainingTitles(rows: EvaluationRow[]): TrainingTitleV
     .sort((a, b) => b.responses - a.responses || a.title.localeCompare(b.title))
 }
 
-/** Raw training titles that belong to a multi-variant (duplicate spelling) group. */
-export function getDuplicateTrainingTitleSet(rows: EvaluationRow[]): Set<string> {
-  const titles = new Set<string>()
-
-  for (const group of suggestTrainingMergeGroups(rows)) {
-    for (const variant of group.variants) {
-      titles.add(variant.title)
-    }
-  }
-
-  return titles
-}
-
-export function isDuplicateTrainingTitle(title: string, duplicateTitles: Set<string>): boolean {
-  return duplicateTitles.has(title.trim())
-}
-
 export function suggestTrainingMergeGroups(rows: EvaluationRow[]): TrainingMergeSuggestion[] {
   const titles = getDistinctTrainingTitles(rows)
   const grouped = new Map<string, TrainingTitleVariant[]>()

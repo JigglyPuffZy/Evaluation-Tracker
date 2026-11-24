@@ -1,32 +1,33 @@
-# Evaluation-Tracker
+# Evaluation Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+DOST RO2 training evaluation and customer satisfaction dashboard, built with React, TypeScript, Vite, and Supabase. It supports public feedback forms, CSV/Excel imports, training summaries, charts, and PDF reports.
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Install dependencies with `npm ci`.
+2. Configure the existing Supabase project in a local `.env` file. Supported variables are `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (or `VITE_SUPABASE_PUBLISHABLE_KEY`), and `VITE_SUPABASE_USE_PROXY`.
+3. Run `npm run dev`.
 
-## React Compiler
+The app validates the Supabase project against its configured project reference. Keep the environment, `src/lib/supabaseEnv.ts`, and the proxy destination in `vercel.json` consistent. Never put a service-role key in a `VITE_*` variable.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The Supabase proxy is enabled by default. Vite proxies `/api/supabase` during development; Vercel supplies the same proxy and client-side routing rewrites in production. `npm run preview` previews the static build but does not provide that API proxy.
 
-## Expanding the Oxlint configuration
+## Checks and build
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+- `npm run lint` checks the code with Oxlint.
+- `npm run build` validates the Supabase environment, type-checks the app, and creates the production build in `dist/`.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
+There is currently no automated test suite or `npm test` script.
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Database maintenance
+
+SQL files are manual maintenance tools, not application runtime imports. Keep the following scripts for setup and support:
+
+- `supabase/setup.sql`: initial schema and setup. This script includes reset operations; review it before using it on an existing database.
+- `supabase/feedback-forms.sql`: public feedback form schema and functions.
+- `supabase/feedback-forms-csf.sql`: customer satisfaction form support.
+- `supabase/create-admin.sql`: administrator account maintenance.
+- `supabase/features-queries.sql`: operational queries.
+- `supabase/verify-graphs.sql`: chart data diagnostics.
+
+See `DEMO-CHECKLIST.md` for the application walkthrough and maintenance examples. Files under `output/` and `tmp/` are local documents, review notes, and source records; they are not required by the application build.

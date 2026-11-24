@@ -1,7 +1,6 @@
 import type { EvaluationStats } from './computeEvaluationStats'
 import type { TrainingSummary } from './buildTrainingSummaries'
-import type { EvaluationRow } from '../types/evaluation'
-import { EVALUATION_SECTIONS, PART_VI_SECTION, RATING_SCALE_MAX } from '../types/evaluation'
+import { EVALUATION_SECTIONS, PART_VI_SECTION, RATING_SCALE_MAX, type EvaluationRow } from '../types/evaluation'
 
 const BENCHMARK_SCORE = 3.5
 const PAGE_MARGIN = 14

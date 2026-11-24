@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { Button } from './Button'
 
 type PageHeaderProps = {
   title: string
@@ -54,27 +53,6 @@ export function SectionHeading({ title, description, action }: SectionHeadingPro
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
-    </div>
-  )
-}
-
-type EmptyStateProps = {
-  title: string
-  description: string
-  actionLabel?: string
-  onAction?: () => void
-}
-
-export function EmptyState({ title, description, actionLabel, onAction }: EmptyStateProps) {
-  return (
-    <div className="glass-panel flex flex-col items-center justify-center rounded-2xl border border-dashed border-line/80 px-6 py-16 text-center">
-      <h2 className="type-title-md text-ink">{title}</h2>
-      <p className="type-body mt-2 max-w-md text-muted">{description}</p>
-      {actionLabel && onAction ? (
-        <Button className="mt-6" onClick={onAction}>
-          {actionLabel}
-        </Button>
-      ) : null}
     </div>
   )
 }

@@ -144,8 +144,6 @@ export const EVALUATION_CSV_HEADERS = [
   'future_suggestions',
 ] as const
 
-export type EvaluationCsvHeader = (typeof EVALUATION_CSV_HEADERS)[number]
-
 export type EvaluationRow = {
   id: string
   evaluator_name: string

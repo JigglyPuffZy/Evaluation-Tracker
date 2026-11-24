@@ -1,11 +1,9 @@
-import type { EvaluationRow } from '../types/evaluation'
+import { RATING_SCALE_MAX, type EvaluationRow } from '../types/evaluation'
 import { getRowOverallAverage } from './evaluationRow'
 import {
-  normalizeTrainingTitle,
   normalizeTrainingTitleForGrouping,
   pickCanonicalTrainingTitle,
 } from './normalizeTrainingTitle'
-import { RATING_SCALE_MAX } from '../types/evaluation'
 
 export type TrainingSummary = {
   trainingTitle: string
@@ -79,33 +77,8 @@ export function buildTrainingSummariesByTitle(rows: EvaluationRow[]): TrainingSu
     .sort((a, b) => b.responses - a.responses)
 }
 
-/** One entry per normalized title + date. */
-export function buildUploadedTrainings(rows: EvaluationRow[]): TrainingSummary[] {
-  const grouped = new Map<string, EvaluationRow[]>()
-
-  for (const row of rows) {
-    const key = `${normalizeTrainingTitleForGrouping(row.training_title)}|||${row.training_date}`
-    const existing = grouped.get(key) ?? []
-    existing.push(row)
-    grouped.set(key, existing)
-  }
-
-  return [...grouped.entries()]
-    .map(([, trainingRows]) => {
-      const canonicalTitle = pickCanonicalTrainingTitle(trainingRows.map((row) => row.training_title))
-      return summarizeRows(canonicalTitle, trainingRows)
-    })
-    .sort((a, b) => b.trainingDate.localeCompare(a.trainingDate))
-}
-
 /** All rows for a program card (includes every spelling variant in the group). */
 export function filterRowsByTrainingTitle(rows: EvaluationRow[], trainingTitle: string): EvaluationRow[] {
   const target = normalizeTrainingTitleForGrouping(trainingTitle)
   return rows.filter((row) => normalizeTrainingTitleForGrouping(row.training_title) === target)
-}
-
-/** Strict match by single normalized spelling (used after DB title merge). */
-export function filterRowsByExactTrainingTitle(rows: EvaluationRow[], trainingTitle: string): EvaluationRow[] {
-  const target = normalizeTrainingTitle(trainingTitle)
-  return rows.filter((row) => normalizeTrainingTitle(row.training_title) === target)
 }

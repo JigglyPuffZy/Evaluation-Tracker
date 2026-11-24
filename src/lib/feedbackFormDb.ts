@@ -115,20 +115,6 @@ export async function setFeedbackFormPublished(
   }
 }
 
-export async function setFeedbackFormShowOnDashboard(
-  formId: string,
-  showOnDashboard: boolean,
-): Promise<void> {
-  const { error } = await supabase
-    .from('feedback_forms')
-    .update({ show_on_dashboard: showOnDashboard })
-    .eq('id', formId)
-
-  if (error) {
-    throw new Error(error.message)
-  }
-}
-
 export async function fetchCsfResponsesRaw(formId: string): Promise<unknown[]> {
   const { data, error } = await supabase
     .from('csf_responses')

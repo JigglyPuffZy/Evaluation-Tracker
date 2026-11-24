@@ -1,1 +1,0 @@
--- Use supabase/create-admin.sql instead (same admin account).

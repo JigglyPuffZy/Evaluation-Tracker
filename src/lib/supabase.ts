@@ -4,7 +4,6 @@ import {
   formatSupabaseNetworkError,
   getSupabaseApiKey,
   getSupabaseConfigError,
-  getSupabaseDirectUrl,
   resolveSupabaseUrl,
   SUPABASE_PROJECT_REF,
 } from './supabaseEnv'
@@ -19,14 +18,14 @@ const supabaseKey = getSupabaseApiKey()
 
 function createSupabaseClient(): SupabaseClient {
   return createClient(resolveSupabaseUrl(), supabaseKey, {
-  auth: {
-    // Pin the key to the project ref. Without this, proxy mode derives it from the page host
-    // (e.g. sb-localhost-auth-token), which clearSupabaseAuthStorage() deletes on every load.
-    storageKey: `sb-${SUPABASE_PROJECT_REF}-auth-token`,
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
+    auth: {
+      // Pin the key to the project ref. Without this, proxy mode derives it from the page host
+      // (e.g. sb-localhost-auth-token), which clearSupabaseAuthStorage() deletes on every load.
+      storageKey: `sb-${SUPABASE_PROJECT_REF}-auth-token`,
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
     global: {
       fetch: (input, init) =>
         resilientFetch(input, init).catch((error: unknown) => {
@@ -38,15 +37,3 @@ function createSupabaseClient(): SupabaseClient {
 }
 
 export const supabase: SupabaseClient = createSupabaseClient()
-
-export function isSupabaseConfigured(): boolean {
-  return getSupabaseConfigError() === null
-}
-
-export function getSupabaseProjectHost(): string {
-  try {
-    return new URL(getSupabaseDirectUrl()).host
-  } catch {
-    return getSupabaseDirectUrl()
-  }
-}
